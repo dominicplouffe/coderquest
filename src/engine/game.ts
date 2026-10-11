@@ -480,8 +480,10 @@ export class Game {
         else if (d > 0.85) {
           const th = (d - 0.85) / 0.3;
           const b = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5][((y & 3) << 2) | (x & 3)] / 16;
-          f.px[i] = b < th ? 0 : DARKER[f.px[i]];
-        } else if (L.rainbow && d > 0.5 && ((x + y) & 3) === 0 && f.px[i] !== 0) f.px[i] = tint;
+          if (b < th) f.px[i] = 0;
+          else if (L.rainbow && th < 0.45 && b < th + 0.25) f.px[i] = tint; // glowing colored rim
+          else f.px[i] = DARKER[f.px[i]];
+        }
       }
   }
 
