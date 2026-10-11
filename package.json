@@ -1,0 +1,21 @@
+{
+  "name": "coders-quest",
+  "version": "1.0.0",
+  "description": "Coder's Quest: The Friday Deploy - a Sierra-style graphic adventure starring Dominic",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite --open",
+    "start": "vite --open",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --open",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/walkthrough.mjs"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vite-plugin-singlefile": "2.3.0"
+  }
+}
