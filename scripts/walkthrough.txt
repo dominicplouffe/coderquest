@@ -49,3 +49,85 @@ use keycard on reader
 #expect-score 80
 go to stairwell
 #expect-score 80
+# ---------------------------------------------------------------- the dark stairwell
+turn on keyboard
+#expect-score 85
+#exitto basement
+# ---------------------------------------------------------------- the basement corridor
+look at photo
+open panel
+turn off breaker 3
+#expect-score 90
+knock on door
+say gertrude
+#expect-score 95
+#exitto serverroom
+# ---------------------------------------------------------------- the server room
+talk to denis
+say none
+#expect-item manual
+#expect-item adapter
+#expect-score 103
+plug adapter into monolith
+#expect-score 106
+wear helmet
+#expect-score 111
+# ================================================================ Act II: inside the Monolith
+talk to king
+talk to duck
+#expect-score 116
+# ---------------------------------------------------------------- the Heap
+go east
+wear badge
+take jar
+go west
+# ---------------------------------------------------------------- Spaghetti Forest & Stack Tower
+go north
+refactor spaghetti
+go west
+say :q!
+ask oracle about the bridge
+#expect-item node
+#expect-score 147
+# ---------------------------------------------------------------- Infinite Loop & Deadlock
+go east
+go north
+break
+go north
+give the break bar to thread a
+talk to adriana
+#expect-item patch
+#expect-score 170
+# ---------------------------------------------------------------- the Null Void & the Legacy Dragon
+go south
+go south
+go south
+go west
+put node in gap
+go west
+read manual to dragon
+#expect-score 190
+# ---------------------------------------------------------------- the Core
+#exitto core
+put jar on altar
+close eyes
+read altar
+apply patch
+#expect-score 217
+log out
+#expect-score 222
+# ================================================================ Act III: the deploy
+talk to denis
+#expect-score 225
+commit
+ask adriana to review
+run tests
+#expect-score 240
+look at clock
+wait
+#expect-flag midnight
+#expect-score 246
+deploy
+#expect-flag deployed
+#expect-score 256
+#eval window.game.modals.some((m) => m.fullscreen) ? 'credits are rolling' : 'NO CREDITS'

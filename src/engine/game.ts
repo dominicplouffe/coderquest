@@ -1232,7 +1232,9 @@ export class Game {
     this.script(async () => {
       if (!(await this.dispatch(c))) await this.hooks.fallback(this, c);
       // "Try Again" resumes from just before the last command, not the room entrance
-      if (!this.dying && this.room && !this.room.cutscene && this.playing) {
+      const p = this.player;
+      const inZone = (this.room?.zones ?? []).some((z) => (z.when?.(this) ?? true) && inArea(z.area, p.x, p.y));
+      if (!this.dying && this.room && !this.room.cutscene && this.playing && !inZone && this.busy <= 1) {
         this.checkpoint = this.serialize();
         try {
           localStorage.setItem(AUTOSAVE_KEY, this.checkpoint);
