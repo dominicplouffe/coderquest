@@ -11,7 +11,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --open",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/walkthrough.mjs"
+    "test": "node scripts/walkthrough.mjs",
+    "release": "npm run build && node -e \"require('fs').copyFileSync('dist/index.html','CodersQuest.html')\""
   },
   "devDependencies": {
     "typescript": "5.9.3",
