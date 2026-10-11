@@ -19,7 +19,7 @@ import {
 } from './ui';
 import { AudioSys } from './audio';
 import type { RoomDef, ItemDef, Hotspot, Area, Response } from './types';
-import { textWidth } from './font';
+import { textWidth, wrapText } from './font';
 
 export const MAX_SCORE = 256;
 export const GAME_TITLE = "Coder's Quest";
@@ -166,6 +166,8 @@ export class Game {
   private last = 0;
   hideStatus = false;
   debug = false;
+  /** simulation speed multiplier (testing) */
+  turbo = 1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -250,14 +252,15 @@ export class Game {
     const loop = (now: number) => {
       const dt = Math.min(100, now - this.last);
       this.last = now;
-      this.acc += dt;
+      this.acc += dt * this.turbo;
       let n = 0;
-      while (this.acc >= 1000 / 60 && n < 6) {
+      const cap = 6 * this.turbo;
+      while (this.acc >= 1000 / 60 && n < cap) {
         this.tick();
         this.acc -= 1000 / 60;
         n++;
       }
-      if (n >= 6) this.acc = 0;
+      if (n >= cap) this.acc = 0;
       this.render();
       requestAnimationFrame(loop);
     };
@@ -843,8 +846,42 @@ export class Game {
   }
 
   // =========================================================== script API
-  /** Text message box. Resolves when dismissed. */
+  /** Text message box. Resolves when dismissed. Long texts are split into pages. */
   say(text: string, opts: MessageOpts = {}): Promise<void> {
+    if (this.dying) return new Promise(() => {});
+    const maxW = opts.width ?? (opts.icon ? 196 : 236);
+    const lines = wrapText(text, maxW);
+    const MAX_LINES = 15;
+    if (lines.length > MAX_LINES) {
+      // paginate on paragraph boundaries where possible
+      const paras = text.split('\n');
+      const pages: string[] = [];
+      let cur = '';
+      for (const para of paras) {
+        const cand = cur ? cur + '\n' + para : para;
+        if (cur && wrapText(cand, maxW).length > MAX_LINES) {
+          pages.push(cur);
+          cur = para;
+        } else cur = cand;
+      }
+      if (cur) pages.push(cur);
+      // a single giant paragraph: split by lines
+      const final: string[] = [];
+      for (const pg of pages) {
+        const pl = wrapText(pg, maxW);
+        if (pl.length <= MAX_LINES) final.push(pg);
+        else for (let i = 0; i < pl.length; i += MAX_LINES) final.push(pl.slice(i, i + MAX_LINES).join(' '));
+      }
+      if (final.length > 1) {
+        return (async () => {
+          for (const pg of final) await this.sayOne(pg, opts);
+        })();
+      }
+    }
+    return this.sayOne(text, opts);
+  }
+
+  private sayOne(text: string, opts: MessageOpts = {}): Promise<void> {
     if (this.dying) return new Promise(() => {});
     const gen = this.gen;
     return new Promise((resolve) => {
@@ -1477,5 +1514,59 @@ export class Game {
 
   ensurePlayer() {
     if (!this.player) this.player = new Actor('dominic', 'Dominic', this.hooks.playerSprite());
+  }
+
+  // =========================================================== testing hooks
+  /**
+   * Run a typed command, auto-dismiss every message box (and pick `choose` in dialogs),
+   * and resolve with the texts shown once the game is idle again.
+   */
+  async testCommand(text: string, opts: { choose?: number; timeout?: number } = {}): Promise<string[]> {
+    const out: string[] = [];
+    if (text) this.execute(text);
+    const start = performance.now();
+    let idleFrames = 0;
+    while (performance.now() - start < (opts.timeout ?? 60000)) {
+      await new Promise((r) => setTimeout(r, 20));
+      const top = this.modals[this.modals.length - 1];
+      if (top instanceof MessageBox) {
+        out.push((top.opts.title ? `[${top.opts.title}] ` : '') + top.text);
+        top.age = 99;
+        top.done();
+        idleFrames = 0;
+        continue;
+      }
+      if (top instanceof Dialog) {
+        out.push(`[dialog${top.opts.title ? ': ' + top.opts.title : ''}] ${top.text}`);
+        if (this.dying) return out;
+        top.age = 99;
+        top.done(opts.choose ?? 0);
+        idleFrames = 0;
+        continue;
+      }
+      if (top && !top.fullscreen) {
+        // inventory, menus, save dialogs: record and close
+        if (top instanceof InventoryWindow) out.push(`[inventory] ${top.items.map((i) => i.name).join(', ')}`);
+        this.pop(top);
+        continue;
+      }
+      if (this.dying) {
+        out.push('[DEATH]');
+        // wait for the dialog to show so its text is captured
+        continue;
+      }
+      if (!top && this.busy === 0 && !this.player?.moving) {
+        if (++idleFrames > 3) break;
+      } else idleFrames = 0;
+    }
+    return out;
+  }
+
+  /** Teleport to a room (testing). */
+  testGoto(room: string, x?: number, y?: number) {
+    this.cancelScripts();
+    this.modals = [];
+    this.playing = true;
+    this.goto(room, x !== undefined && y !== undefined ? [x, y] : undefined, { noDissolve: true });
   }
 }

@@ -45,6 +45,7 @@ game.ensurePlayer();
 const params = new URLSearchParams(location.search);
 (window as any).game = game;
 game.start();
+if (params.get('turbo')) game.turbo = Number(params.get('turbo'));
 if (params.get('room')) {
   game.modals = [];
   game.newState('');

@@ -142,7 +142,7 @@ const STOP = new Set([
   'the', 'a', 'an', 'some', 'my', 'your', 'his', 'her', 'its', 'their', 'our', 'this', 'that', 'these', 'those',
   'please', 'now', 'then', 'quickly', 'carefully', 'just', 'very', 'really', 'gently', 'again', 'it', 'him', 'them',
   'all', 'any', 'kindly', 'slowly', 'lol', 'up', 'down', 'piece', 'bit', 'bunch', 'whole', 'try', 'to', 'and', 'other',
-  'there', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
+  'there', 'until', 'till', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
 ]);
 
 const PREPS = new Set([

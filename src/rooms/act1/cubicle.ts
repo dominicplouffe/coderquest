@@ -109,19 +109,27 @@ function paint(p: Surface, g: Game) {
     p.rect(225, 116, 4, 1, 7);
   });
   if (g.flag('drawer_open')) {
-    p.at(121, () => {
-      p.poly([212, 110, 242, 110, 245, 117, 209, 117], 7);
-      p.rect(209, 117, 36, 3, 8);
-      p.rect(213, 111, 28, 5, 0);
-      p.rect(215, 113, 5, 1, 4);
-      p.rect(222, 114, 6, 1, 1);
-      p.rect(234, 112, 6, 3, dith(6, 14, 8));
+    p.at(124, () => {
+      // drawer box pulled out of the pedestal, seen from above
+      p.poly([215, 107, 239, 107, 243, 117, 211, 117], 0);
+      p.lines([215, 107, 211, 117], 7);
+      p.lines([239, 107, 243, 117], 7);
+      p.hline(215, 239, 107, 8);
+      // contents: pens, granola bar, the duck
+      p.line(216, 115, 222, 113, 4);
+      p.line(217, 116, 223, 114, 1);
+      p.rect(233, 112, 6, 3, 6);
+      p.hline(233, 238, 112, 14);
       if (!g.flag('duck_taken')) {
-        p.ellipse(228, 114, 3, 1, 14);
-        p.rect(229, 111, 3, 2, 14);
-        p.plot(232, 112, 6);
-        p.plot(230, 111, 0);
+        p.ellipse(227, 114, 3, 1, 14);
+        p.rect(228, 110, 3, 3, 14);
+        p.plot(231, 111, 6);
+        p.plot(229, 110, 0);
       }
+      // drawer front
+      p.rect(210, 117, 34, 5, 8);
+      p.frame(210, 117, 34, 5, 0);
+      p.rect(224, 119, 6, 1, 7);
     });
   }
   // ---- things on the desk

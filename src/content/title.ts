@@ -82,19 +82,19 @@ export class TitleScreen implements Modal {
       bx += bw + 1;
     }
     // the Monolith Systems tower
-    const tx = 252;
-    s.rect(tx, 30, 44, 90, 0);
-    s.rect(tx + 2, 32, 40, 88, 8);
+    const tx = 270;
+    s.rect(tx, 30, 40, 90, 0);
+    s.rect(tx + 2, 32, 36, 88, 8);
     s.rect(tx + 4, 32, 2, 88, dith(8, 7, 6));
     for (let fy = 36; fy < 116; fy += 6)
-      for (let fx = tx + 8; fx < tx + 40; fx += 6) {
+      for (let fx = tx + 8; fx < tx + 36; fx += 6) {
         const lit = fy === 96 && fx === tx + 20; // Dominic's window, 3rd floor
         s.rect(fx, fy, 3, 3, lit ? (Math.floor(t / 30) % 2 ? 14 : 15) : (fx * 7 + fy * 3) % 11 === 0 ? 6 : 0);
       }
-    s.rect(tx + 18, 22, 8, 8, 0);
-    s.vline(tx + 22, 8, 22, 7);
-    s.plot(tx + 22, 7, Math.floor(t / 20) % 2 ? 12 : 4);
-    s.micro(tx + 4, 24, 'MONOLITH', 11);
+    s.rect(tx + 16, 22, 8, 8, 0);
+    s.vline(tx + 20, 12, 22, 7);
+    s.plot(tx + 20, 11, Math.floor(t / 20) % 2 ? 12 : 4);
+    s.micro(tx + 2, 24, 'MONOLITH', 11);
     // neon grid floor, scrolling
     s.rect(0, 120, 320, 80, 0);
     s.hline(0, 319, 120, 13);
@@ -122,8 +122,8 @@ export class TitleScreen implements Modal {
       if (hi) s.rect(mx + 4, y - 1, bw - 8, 11, UI.hiBg);
       s.textC(160, y + 1, o.label, hi ? UI.hiFg : UI.fg);
     });
-    s.micro(3, 3, 'V1.0', 8);
-    s.micro(317 - 70, 3, 'STARRING DOMINIC', 7);
+    const star = 'STARRING DOMINIC';
+    s.micro(160 - 33, 99, star, 7);
   }
   key(k: KeyIn) {
     if (this.age < 10) return;

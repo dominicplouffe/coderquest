@@ -4,6 +4,7 @@ import { cubicleIntro } from '../rooms/act1/cubicle';
 
 export async function newGame(g: Game) {
   g.set('act', 1);
+  g.addItem('phone', true);
   g.set('ext_time', 'dusk');
   g.goto('exterior', [-40, 180, 'right']);
   g.music('title');
