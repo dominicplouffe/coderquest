@@ -42,26 +42,40 @@ function paint(p: Surface, g: Game) {
   p.vline(300, 80, 122, 8);
 
   // ---- floor: cubicle carpet + aisle runner in the foreground
-  carpet(p, 84, 190, { a: 8, b: 0 });
+  p.rect(0, 84, 320, 106, 8);
+  p.gradV(0, 116, 320, 8, [0, 8]);
+  p.speckle(0, 120, 320, 30, 7, 0.006, 41);
   // aisle runner in the foreground
   p.rect(0, 151, 320, 39, 1);
-  p.hline(0, 319, 151, 9);
-  p.hline(0, 319, 152, 0);
-  p.speckle(0, 153, 320, 37, 0, 0.03, 17);
+  p.hline(0, 319, 151, 0);
+  p.hline(0, 319, 152, 9);
+  p.hline(0, 319, 154, 9);
+  p.hline(0, 319, 186, 9);
+  p.hline(0, 319, 188, 9);
+  for (let x = 6; x < 320; x += 12) p.plot(x, 153, 11);
+  for (let x = 12; x < 320; x += 12) p.plot(x, 187, 11);
+  p.speckle(0, 156, 320, 29, 9, 0.008, 17);
 
   // ---- Dominic's cubicle: back partition (1.5m = ~32px tall)
   const PT = 82,
     PB = 116;
   partition(p, 60, PT, 200, PB - PT, 7);
-  p.speckle(60, PT + 3, 200, PB - PT - 3, 9, 0.04, 5);
+  p.speckle(60, PT + 3, 200, PB - PT - 3, 9, 0.012, 5);
+  p.hline(60, 259, PB - 1, 8);
   // left side panel, coming toward the viewer
-  p.poly([30, 68, 60, PT, 60, PB, 30, 148], dith(7, 8, 3));
+  p.poly([30, 68, 60, PT, 60, PB, 30, 148], 7);
+  p.poly([52, 79, 60, PT, 60, PB, 52, 123], dith(7, 8, 6));
   p.lines([30, 68, 60, PT], 8);
   p.lines([30, 69, 60, PT + 1], 8);
   p.rect(28, 68, 3, 81, 8);
   p.vline(28, 68, 148, 7);
   // right side panel
-  p.poly([260, PT, 290, 68, 290, 148, 260, PB], dith(7, 8, 3));
+  p.poly([260, PT, 290, 68, 290, 148, 260, PB], 7);
+  p.poly([260, PT, 268, 79, 268, 123, 260, PB], dith(7, 8, 6));
+  // name plate on the cubicle's front edge
+  p.rect(271, 96, 16, 7, 15);
+  p.frame(271, 96, 16, 7, 8);
+  p.micro(272, 97, 'DOM', 1);
   p.lines([260, PT, 290, 68], 8);
   p.lines([260, PT + 1, 290, 69], 8);
   p.rect(290, 68, 3, 81, 8);
@@ -98,7 +112,8 @@ function paint(p: Surface, g: Game) {
     p.hline(66, 254, 98, 14);
     p.rect(62, 104, 197, 2, 0);
     p.rect(64, 106, 193, 12, 6);
-    p.rect(66, 107, 189, 10, dith(6, 0, 4));
+    for (let x = 70; x < 256; x += 9) p.vline(x, 107, 115, dith(6, 0, 8));
+    p.hline(64, 256, 106, 14);
     p.rect(64, 116, 193, 2, 0);
     // drawer pedestal
     p.rect(214, 106, 26, 12, 8);
