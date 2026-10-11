@@ -756,6 +756,14 @@ export const core: RoomDef = {
       if (b.visible) vanish(g, b);
       await g.say("You address the bug directly. It seems to take this as a form of observation, and stops existing for a while. Somewhere, it snickers in hexadecimal.");
     },
+    'use|show|give duck bug': async (g) => {
+      const b = bugActor(g);
+      if (!b) return false;
+      if (b.visible) vanish(g, b);
+      await g.say('You hold the duck up to face the bug. The duck stares. The bug, being observed by a duck, stops existing. The duck looks enormously pleased with itself.\n\n"Quack," it says. "Observation works on bugs. Ask me how to actually CATCH one."');
+    },
+    'touch computer': async (g) =>
+      void (await g.say(g.flag('bug_fixed') ? 'Warm, steady, green. A display with nothing left to worry about.' : 'The glass is warm. Under your fingertip the 00 flickers to 19 and back, as if the display is arguing with itself about which century it is.')),
     'show|give * bug': async (g) => {
       const b = bugActor(g);
       if (!b) return false;
