@@ -56,3 +56,33 @@ if (params.get('room')) {
   game.goto(params.get('room')!);
 }
 void AudioSys;
+
+// Touch devices (phones/tablets): a canvas can't summon the on-screen keyboard,
+// so offer a few retro buttons. Tapping the screen walks, as with a mouse.
+if (window.matchMedia?.('(pointer: coarse)').matches) {
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;right:8px;bottom:8px;display:flex;gap:6px;z-index:10;font:14px monospace';
+  const mk = (label: string, fn: () => void) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.style.cssText = 'background:#fff;color:#000;border:2px solid #a00;box-shadow:3px 3px 0 #000;padding:6px 10px;font:inherit';
+    b.addEventListener('click', (e) => {
+      e.preventDefault();
+      game.audio.unlock();
+      fn();
+    });
+    bar.appendChild(b);
+  };
+  mk('Type', () => {
+    if (!game.playing || game.modals.length || game.busy) return;
+    const t = window.prompt('What do you want to do?');
+    if (t && t.trim()) game.execute(t);
+  });
+  mk('Items', () => {
+    if (game.playing && !game.modals.length && !game.busy) game.showInventory();
+  });
+  mk('Menu', () => {
+    if (game.playing && !game.modals.length) game.openMenu(0);
+  });
+  document.body.appendChild(bar);
+}
