@@ -7,7 +7,7 @@
 //   r     rest     &  tie (extends previous note)   q6  gate (1-8, staccato)
 //   [ ... ]3  repeat block 3 times
 //   Instruments: @0 square  @1 pulse 25%  @2 pulse 12%  @3 triangle  @4 saw  @5 drums
-//   On the drum instrument: k = kick, s = snare, h = hi-hat, c = crash, t = tom
+//   On the drum instrument: k = kick, s = snare, h = hi-hat, c = crash, m = tom
 
 export interface Song {
   tracks: string[];
@@ -87,7 +87,7 @@ function compileTrack(src: string, startTempo: number): { evs: Ev[]; len: number
       const last = evs[evs.length - 1];
       if (last) last.d += d;
       t += d;
-    } else if (inst === 5 && 'kshct'.includes(ch)) {
+    } else if (inst === 5 && 'kshcm'.includes(ch)) {
       const d = dur();
       evs.push({ t, d, f: 0, v: vol / 15, inst, drum: ch, gate });
       t += d;
@@ -303,7 +303,7 @@ export class AudioSys {
     const g = ctx.createGain();
     g.connect(bus);
     let stopper: AudioScheduledSourceNode;
-    if (kind === 'k' || kind === 't') {
+    if (kind === 'k' || kind === 'm') {
       const o = ctx.createOscillator();
       o.type = 'sine';
       const f0 = kind === 'k' ? 140 : 220;

@@ -44,13 +44,16 @@ export function skyline(
       const bw = 8 + Math.floor(r() * 16);
       const bh = Math.floor(h * (layer ? 0.25 + r() * 0.3 : 0.35 + r() * 0.45));
       const top = y + h - bh;
-      const col = layer ? 0 : time === 'day' ? 8 : 1;
+      const day = time === 'day';
+      const col = day ? (layer ? 8 : 7) : layer ? 0 : 1;
       p.rect(bx, top, bw, bh, col);
       if (r() < 0.3) p.rect(bx + Math.floor(bw / 2) - 1, top - 4, 2, 4, col); // antenna
-      // windows
+      // windows (lit at night, dark glass by day)
       for (let wy = top + 2; wy < y + h - 1; wy += 3)
         for (let wx = bx + 1; wx < bx + bw - 1; wx += 2) {
-          if (r() < (layer ? 0.25 : 0.18)) p.plot(wx, wy, r() < 0.7 ? 14 : 15);
+          if (day) {
+            if (r() < 0.5) p.plot(wx, wy, layer ? 1 : 9);
+          } else if (r() < (layer ? 0.25 : 0.18)) p.plot(wx, wy, r() < 0.7 ? 14 : 15);
         }
       bx += bw + Math.floor(r() * 3);
     }
