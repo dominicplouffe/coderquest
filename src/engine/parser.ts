@@ -30,7 +30,7 @@ const VERBS: Record<string, string[]> = {
     'view', 'observe', 'study', 'watch', 'see', 'peer at', 'peer into>in', 'peer', 'gaze at', 'gaze',
     'stare at', 'stare', 'glance at', 'glance', 'describe', 'admire', 'ogle',
   ],
-  search: ['search through', 'search in', 'search', 'rummage through', 'rummage in', 'rummage', 'frisk', 'dig through', 'go through', 'look for', 'find'],
+  search: ['search through', 'search in', 'search', 'rummage through', 'rummage in', 'rummage', 'frisk', 'dig through', 'look for', 'find'],
   read: ['read', 'peruse', 'skim'],
   take: ['pick up', 'take', 'get', 'grab', 'obtain', 'acquire', 'steal', 'collect', 'snatch', 'nab', 'snag', 'borrow', 'retrieve', 'keep', 'carry'],
   drop: ['put down', 'drop', 'discard', 'throw away', 'dump', 'ditch', 'release'],
@@ -52,7 +52,7 @@ const VERBS: Record<string, string[]> = {
   turnon: ['turn on', 'switch on', 'power on', 'power up', 'activate', 'enable', 'boot up', 'boot', 'start up', 'light up', 'illuminate'],
   turnoff: ['turn off', 'switch off', 'power off', 'power down', 'deactivate', 'disable', 'shut down', 'shutdown', 'shut off', 'kill power to'],
   turn: ['turn', 'rotate', 'twist', 'spin', 'switch'],
-  flip: ['flip', 'toggle', 'throw'],
+  flip: ['flip', 'toggle'],
   reboot: ['reboot', 'restart', 'reset', 'power cycle', 'cycle'],
   unplug: ['unplug', 'disconnect', 'detach'],
   plug: ['plug in', 'plug', 'connect', 'hook up', 'attach', 'jack into>into', 'jack in'],
@@ -142,7 +142,7 @@ const STOP = new Set([
   'the', 'a', 'an', 'some', 'my', 'your', 'his', 'her', 'its', 'their', 'our', 'this', 'that', 'these', 'those',
   'please', 'now', 'then', 'quickly', 'carefully', 'just', 'very', 'really', 'gently', 'again', 'it', 'him', 'them',
   'all', 'any', 'kindly', 'slowly', 'lol', 'up', 'down', 'piece', 'bit', 'bunch', 'whole', 'try', 'to', 'and', 'other',
-  'there', 'until', 'till', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
+  'there', 'until', 'till', 'closely', 'harder', 'deeply', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
 ]);
 
 const PREPS = new Set([
@@ -383,7 +383,7 @@ export function parse(raw: string, local?: PhraseMap, extraLocal?: PhraseMap): C
     c.prep = 'to';
   }
   // "look around" / "look at room" -> plain look
-  if (c.verb === 'look' && (c.noun === 'room' || c.noun === 'around')) {
+  if (c.verb === 'look' && (c.noun === 'room' || c.noun === 'around' || c.noun === 'everything')) {
     c.noun = null;
     c.nounWord = null;
   }

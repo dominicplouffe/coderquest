@@ -181,9 +181,9 @@ async function conferenceScene(g: Game) {
   g.actor('aidan')!.dir = 'left';
   await line(g, 'aidan', "Um. Everyone? About Friday. I'm really, really sorry I pressed the big red button.");
   g.actor('denis')!.dir = 'right';
-  await line(g, 'denis', 'Kid. That bug was asleep in my date routine since 1987. I wrote it. Two digits for the year. All you did was wake it up.');
+  await line(g, 'denis', 'Kid. That bug had been sitting in my date routine since 1987. I wrote it. Two digits for the year. All you did was wake it up.');
   await line(g, 'denis', "It wasn't your fault. It never was.");
-  await line(g, 'adriana', 'Blameless postmortem, Aidan. And for the record, you found a twenty-seven-year-old bug on your very first deploy.');
+  await line(g, 'adriana', 'Blameless postmortem, Aidan. And for the record, you found a thirty-nine-year-old bug on your very first deploy.');
   await line(g, 'phil', "Which is why we'd like to offer you a full-time position. You start next Monday. Not on a Friday.");
   pose(g, ['aidan'], 'cheer', 'down');
   await line(g, 'aidan', "REALLY?! I won't let you down! I'll never touch a big red button again!");
@@ -218,7 +218,7 @@ const EPILOGUES: [string, string][] = [
   ['phil', 'Phil introduced Form FD-1, the Friday Deploy Exception Request. Nobody has ever filed one. His swear jar has been empty since Monday, and he finally broke 90 on the golf course.'],
   ['krishna', 'The Neural Debugging Interface earned Krishna two patents and one very confused safety review. Version 3 has its own battery and a much bigger LOG OUT button.'],
   ['denis', 'Denis spent three weeks on a beach in Portugal: his first vacation since 1999. While he was away, Fahim rebooted the Monolith on a Tuesday afternoon. It came right back up. Denis sent it a postcard.'],
-  ['adriana', 'Adriana now leads the Monolith modernization project. The old machine has tests, documentation and a backup. Threads A and B were refactored into a lock-free queue, and are by all accounts very happy together.'],
+  ['adriana', 'Adriana now leads the Monolith modernization: tests, documentation, even a backup. Threads A and B were refactored into a lock-free queue, and are by all accounts very happy together.'],
 ];
 
 async function curtainCall(g: Game) {
@@ -284,9 +284,9 @@ const FEATURING: [string, string][] = [
   ['The Garbage Collector', 'Itself'],
   ['PID 1991', 'A Ghost Stuck in Vim'],
   ['The Oracle of the Stack', 'Closed as Duplicate'],
-  ['Thread A and Thread B', 'Still Waiting (for each other)'],
+  ['Thread A and Thread B', 'Lock-Free at Last'],
   ['The Legacy Dragon', 'Very Sleepy'],
-  ['The Millennium Bug', 'Not a Feature (Fixed)'],
+  ['The Millennium Bug', 'Now a Feature'],
   ['Mr. Henderson and Ms. Whitfield', 'The Investors'],
   ['THE MONOLITH', 'Itself, since 1987'],
 ];

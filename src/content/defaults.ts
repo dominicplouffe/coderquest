@@ -63,7 +63,7 @@ export async function fallback(g: Game, c: Command) {
       ]),
     );
   }
-  if (!c.noun && c.unknown && !['say', 'type', 'go', 'wait', 'look'].includes(c.verb)) {
+  if (!c.noun && c.unknown && !['say', 'type', 'go', 'wait'].includes(c.verb)) {
     return g.say(pick([`You don't see any "${c.unknown}" around here.`, `I don't know what a "${c.unknown}" is, but there isn't one here.`]));
   }
   // a noun that isn't here at all
@@ -128,6 +128,7 @@ export async function fallback(g: Game, c: Command) {
     case 'give':
     case 'show':
       if (c.noun && !g.has(c.noun)) return g.say(`You don't have ${aOr(n)}.`);
+      if (c.noun2 && !g.present(c.noun2)) return g.say(`There's no ${c.noun2Word ?? 'such person'} here.`);
       if (c.noun2 && isPerson(g, c.noun2)) return g.say(`${nounName(g, c, 2)} doesn't seem interested in the ${n}.`);
       if (c.noun2) return g.say(`The ${nounName(g, c, 2)} doesn't seem interested.`);
       return g.say(`${c.verb === 'give' ? 'Give' : 'Show'} it to whom?`);

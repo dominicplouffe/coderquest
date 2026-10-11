@@ -7,6 +7,7 @@ import { Surface, rng, microWidth } from '../../engine/raster';
 import { dith, DARKER } from '../../engine/palette';
 import { parse } from '../../engine/parser';
 import { award } from '../../content/points';
+import { act1Raw, readAsLook } from './natural';
 import { blockWall, pipeH, pipeV, bracket, cardboardBox, tubeOn } from '../../art/basement_props';
 
 const SEAM = 118; // wall/floor seam
@@ -398,7 +399,11 @@ async function breaker(g: Game, n: number | null, on: boolean, all = false) {
     g.set('vending_off');
     g.redraw();
     await g.wait(700);
-    await g.say('You flip breaker 2: VENDING MACHINES. Far, far above you, faint but unmistakable, Mike screams.');
+    await g.say(
+      g.flag('candy_bought')
+        ? 'You flip breaker 2: VENDING MACHINES. Far, far above you, a vending machine powers down with a sad little whine. Somewhere, Mike senses a disturbance in the snack supply.'
+        : 'You flip breaker 2: VENDING MACHINES. Far, far above you, faint but unmistakable, Mike screams.',
+    );
     g.set('vending_off', false);
     g.redraw();
     g.sfx('thud');
@@ -476,7 +481,7 @@ export const basement: RoomDef = {
     },
     {
       id: 'bell',
-      nouns: ['doorbell', 'bell', 'button', 'buzzer', 'tag', 'out of order'],
+      nouns: ['doorbell', 'bell', 'button', 'buzzer', 'tag', 'out of order', 'intercom', 'door bell'],
       area: [DOOR.x + DOOR.w + 4, 85, 10, 15],
       at: [284, 126],
       look: 'A doorbell. The tag hanging from it reads: "OUT OF ORDER SINCE 1994. KNOCK. LOUDLY."',
@@ -558,7 +563,7 @@ export const basement: RoomDef = {
     },
     {
       id: 'wetsign',
-      nouns: ['wet floor sign', 'caution sign', 'yellow sign', 'a frame', 'caution'],
+      nouns: ['wet floor sign', 'caution sign', 'yellow sign', 'a frame', 'caution', 'cone', 'safety cone', 'wet floor', 'caution cone'],
       area: [145, 106, 16, 22],
       at: [140, 136],
       look: 'A yellow sign: CAUTION! WET FLOOR. It undersells the situation considerably.',
@@ -579,10 +584,10 @@ export const basement: RoomDef = {
     },
     {
       id: 'gauge',
-      nouns: ['gauge', 'dial', 'pressure gauge'],
+      nouns: ['gauge', 'dial', 'pressure gauge', 'clock', 'round thing', 'needle'],
       area: [26, 56, 10, 12],
       at: [36, 128],
-      look: 'A pressure gauge. The needle points firmly into the red. It has pointed into the red since 1991. Everyone agreed this was probably fine.',
+      look: "A round pressure gauge on the wall, which you took for a clock at first. The needle points firmly into the red. It has pointed into the red since 1991. Everyone agreed this was probably fine.",
     },
   ],
   exits: [
@@ -616,11 +621,17 @@ export const basement: RoomDef = {
   nouns: {
     rat: ['rat', 'rats', 'mouse', 'rodent'],
     power: ['power', 'electricity', 'current', 'juice'],
+    aux: ['aux', 'basement aux', 'auxiliary', 'basement auxiliary', 'breaker three', 'third breaker'],
+    vendbreaker: ['vending machines', 'vending machine', 'vending', 'vending breaker'],
   },
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
     const t = text.toLowerCase();
     if (g.flag('door_open')) return false;
     if (/gertrude|gertie|gerty/.test(t)) {
+      // LOOK AT GERTRUDE, READ GERTRUDE etc. mean the photo, not the password
+      const pc = parse(text);
+      if (pc.verb && !['say', 'tell', 'answer', 'type', 'knock', 'talk', 'ask', 'call'].includes(pc.verb)) return false;
       if (!slotOpen) {
         if (!safe(g) && westOfPuddle(g)) {
           await g.say("You say \"Gertrude\" to the corridor. The corridor doesn't care. Whoever might care is behind that steel door, on the far side of a sparking puddle.");
@@ -665,7 +676,7 @@ export const basement: RoomDef = {
       if (c.verb === 'look') return false;
       await g.say(slotOpen ? "It's already open. Two eyes are glaring out of it. They want a name." : 'It only opens from the inside. The documented API appears to be knocking.');
     },
-    'push|use|ring bell': async (g) => {
+    'push|use|call|ring bell': async (g) => {
       if (!safe(g) && westOfPuddle(g)) return void (await g.say("The doorbell is on the far side of the electrified puddle. It's out of order anyway, according to its tag."));
       await g.approach('bell');
       g.sfx('error');
@@ -738,6 +749,15 @@ export const basement: RoomDef = {
     },
     'fix|repair cable,fix|repair jbox': "You're a software engineer. Your relationship with hardware is strictly \"turn it off and on again\". Though turning it OFF might be a start.",
     'turnoff cable|jbox|sparks,unplug|turnoff puddle': 'There is no switch on the cable itself. Power comes from somewhere. Probably that breaker panel down the hall.',
+    'turnoff|flip|push|pull|turn|cut|use aux': async (g) => breaker(g, 3, false),
+    'turnon|reset aux': async (g) => breaker(g, 3, true),
+    'look|read aux': (g) => g.say(`Breaker 3, labeled BASEMENT AUX in Denis's handwriting.${safe(g) ? ' It is off.' : ''}`),
+    'turnoff|flip|push|pull|turn|cut vendbreaker': async (g) => breaker(g, 2, false),
+    'go|enter puddle': async (g) => {
+      // walking THROUGH it, not just up to it
+      const fromEast = g.player.x > 200;
+      await g.walk(null, fromEast ? 128 : 256, 158);
+    },
     'jump puddle,jump/over puddle,jump': async (g, c) => {
       if (!c.noun && c.verbWord === 'jump') return void (await g.say('You hop on the spot. The puddle is unimpressed.'));
       await g.say(safe(g) ? "No need. It's only water now. You can just walk through it like a regular, wet person." : 'The puddle is a good eight feet across. You are a senior engineer, not an Olympic long jumper. Your Olympic event is "competitive sitting".');
@@ -779,6 +799,7 @@ export const basement: RoomDef = {
     'wait': async (g) => {
       await g.say(safe(g) ? 'You wait. The tube flickers. The pipe drips. The Monolith stays down.' : 'You wait. The tube flickers. The cable sparks. The Monolith stays down. Time to do something.');
     },
+    'read *': readAsLook,
   },
   enter(g) {
     slotOpen = false;

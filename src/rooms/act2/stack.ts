@@ -7,7 +7,7 @@ import { Actor } from '../../engine/actor';
 import { Surface, rng, microWidth } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
 import { starfield } from '../../art/lib';
-import { twinkle, sevenSeg, microOutlined, CYBER_VERBS } from '../../art/cyber_c_kit';
+import { twinkle, sevenSeg, microOutlined, CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 import { ghostImg, tilde, drawOracleScreen, halo } from '../../art/creatures_c';
 import { noodleTree } from '../../art/cyber_c_pasta';
 import { award } from '../../content/points';
@@ -224,15 +224,16 @@ async function oracleSay(g: Game, text: string) {
 const NEED_REP = 'You need at least 50 reputation to ask a question. Your current reputation: 1.\n\nPerhaps you could start by answering somebody else\'s question?';
 
 const TOPICS: [RegExp, string][] = [
-  [/heisen|\bbugs?\b|beast|insect|creature/, 'Q: "How do I catch a bug that disappears whenever I look at it?"\n\nACCEPTED ANSWER (+4,096): Observing it makes it vanish. So don\'t look. Write a test that catches it for you.'],
+  [/heisen|\bbugs?\b|beast|insect|creature|\bcatch|\btrap/, 'Q: "How do I catch a bug that disappears whenever I look at it?"\n\nACCEPTED ANSWER (+4,096): Observing it makes it vanish. So don\'t look. Write a test that catches it for you.'],
   [/adriana|architect/, 'Last seen beyond the Infinite Loop, north of the forest.\n\nThis question has been closed as off-topic.'],
   [/dragon|cobol|legacy/, 'ACCEPTED ANSWER: Legacy systems can be soothed with their own documentation. Nothing puts a legacy system to sleep faster than its own manual.\n\n(Comment: "this worked for me in 1988, thx")'],
   [/\bvim\b|editor|ghost|1991|exit/, 'Duplicate.'],
   [/loop|infinite|while/, 'Q: "How do I get out of an infinite loop?"\n\nACCEPTED ANSWER (+1,287): break.\n\n(Second answer: "Have you tried pressing Escape?" +12)'],
   [/forest|spaghetti|noodle/, 'Refactor it. Next question.'],
+  [/deadlock|thread|\block|cage|mutex|philosopher/, 'Q: "Two threads each hold the lock the other one needs. Neither will let go first."\n\nACCEPTED ANSWER (+999): Somebody has to yield. Nobody yields for free.\n\n(Comment: "honestly they just need a break lol")'],
   [/king|kernel/, 'He has a reputation of 1 and is somehow a moderator. Do not ask how.'],
   [/heap|garbage|collector|\bgc\b|badge/, 'Make sure something references you. A name tag works.\n\nThis answer was edited 47 times.'],
-  [/duck/, 'Rubber duck debugging is the accepted answer to roughly 30% of all questions on this site. Have you tried it?'],
+  [/duck|\bhelp\b|stuck|\bhint/, 'Rubber duck debugging is the accepted answer to roughly 30% of all questions on this site. Have you tried it?'],
   [/div|center|centre|css/, 'Closed as duplicate of 40,000 other questions.'],
   [/oracle|yourself|\byou\b|meta/, 'Questions about the Oracle belong on Meta.'],
   [/jar|test|unit/, 'Write the test first. Then the bug has nowhere to hide. (+3 votes, -11 votes, 600 comments arguing)'],
@@ -259,7 +260,7 @@ async function askOracle(g: Game, raw: string) {
     award(g, 'oracle_asked');
     await oracleSay(g, 'Your first question! Please review the guidelines before posting. Thank you for contributing to the Stack.\n\n...Processing.');
   }
-  if (/bridge|void|\bnull\b|\bnode\b|\bgap\b|linked|pointer|nullpointer|missing/.test(topic)) {
+  if (/bridge|void|\bnull\b|\bnode\b|\bgap\b|linked|pointer|nullpointer|missing|chasm|abyss|\bcross|\blist\b|\blink\b/.test(topic)) {
     if (g.flag('node_given')) return oracleSay(g, 'Closed as duplicate of your own previous question. (You already have the node. Check your inventory.)');
     await oracleSay(g, 'Q: "How do I fix a broken linked list over a Null Void?"\n\nMarked as duplicate of "How do I fix a broken linked list?" (asked 1999).\n\nThe accepted answer is... here. Take this.');
     g.sfx('teleport');
@@ -297,11 +298,20 @@ function isVimAnswer(text: string): boolean {
   return false;
 }
 
+/** "escape colon w q bang" -> ":wq!" (for answers spelled out in words). */
+function spokenVimCmd(raw: string): string {
+  const t = raw.toLowerCase();
+  const m = /\bcolon\s*(w\s*q\s*a\b|w\s*q|q\s*a\b|quit|exit|w|q|x)\s*(!|bang|exclamation( point| mark)?)?/.exec(t);
+  if (!m) return ':q!';
+  const letters = m[1].replace(/\s+/g, '');
+  return `:${letters}${m[2] ? '!' : ''}`;
+}
+
 async function solveVim(g: Game, raw: string) {
   const a = ghost(g);
   if (!a) return;
   await g.approach(a);
-  const cmd = (raw.match(/:\s*[a-z!]+/i)?.[0] ?? (/zz/i.test(raw) ? 'ZZ' : ':q!')).replace(/\s+/g, '');
+  const cmd = (raw.match(/:\s*[a-z!]+/i)?.[0] ?? (/zz/i.test(raw) ? 'ZZ' : spokenVimCmd(raw))).replace(/\s+/g, '');
   await g.talk(g.player, `Listen carefully. Press Escape. Then type ${cmd === 'ZZ' ? 'capital Z, capital Z' : cmd.split('').join(' ').replace(':', 'colon').replace('!', 'bang')}. ${cmd === 'ZZ' ? '' : 'Then press Enter.'}`);
   await g.talk(a, `Escape... ${cmd === 'ZZ' ? 'Z... Z...' : cmd.split('').join('... ').replace(':', 'colon')}...${cmd === 'ZZ' ? '' : ' ENTER?'}`);
   vimCmd = cmd;
@@ -394,6 +404,9 @@ function tick(g: Game) {
 
 // ------------------------------------------------------------------ room
 
+/** (the ghost hotspot and the room vocabulary share these: a hotspot's noun list replaces a room noun list with the same id) */
+const GHOST_NOUNS = ['ghost', 'process', 'pid', 'pid 1991', '1991', 'spirit', 'phantom', 'specter', 'spectre', 'ghost process', 'poor process', 'tildes', 'tilde', 'status line'];
+
 export const stack: RoomDef = {
   id: 'stack',
   title: 'The Stack Overflow Tower',
@@ -406,15 +419,15 @@ export const stack: RoomDef = {
   look: (g) =>
     `The Stack Overflow Tower: call frames piled on call frames, main() at the bottom, then init(), then parse(), parse(), parse()... swaying gently as they rise off the top of the sky. Someone forgot the base case.\n\nThe whole tower rests on an enormous old CRT monitor. On its screen glows a giant, solemn face: the Oracle.${
       g.flag('vim_solved') ? '' : '\n\nNearby, a translucent ghost hovers in mid-air, wailing.'
-    }`,
+    } A trail leads back east to the Spaghetti Forest.`,
   hotspots: [
-    { id: 'sky', nouns: ['sky', 'stars', 'words', 'constellations', 'phrases', 'chevrons', 'upvotes', 'arrows'], area: [0, 0, 320, 56], look: 'Words hang in the dark like constellations: POSSIBLE DUPLICATE. WORKS ON MY MACHINE. [CLOSED]. Little orange upvote chevrons drift slowly upward, like sparks from a campfire of arguments.' },
+    { id: 'sky', nouns: ['sky', 'stars', 'words', 'constellations', 'phrases', 'chevrons', 'upvotes', 'arrows', 'text', 'writing', 'possible duplicate', 'duplicate', 'marked as duplicate', 'closed', 'works on my machine', 'nevermind', 'never mind', 'fixed it', 'nevermind fixed it', 'edit', 'comments'], area: [0, 0, 320, 56], look: 'Words hang in the dark like constellations: POSSIBLE DUPLICATE. WORKS ON MY MACHINE. [CLOSED]. Little orange upvote chevrons drift slowly upward, like sparks from a campfire of arguments.' },
     { id: 'floor', nouns: ['floor', 'ground', 'tiles', 'plaza', 'checkerboard'], area: [0, 113, 320, 77], look: 'A plaza of dark tiles with orange seams, polished smooth by generations of programmers pacing while waiting for an answer.' },
     { id: 'forest', nouns: ['forest', 'trees', 'spaghetti', 'trail', 'path'], area: [270, 80, 50, 50], look: 'To the east, the trail winds back toward the Spaghetti Forest.' },
     { id: 'popped', nouns: ['popped frame', 'fallen frame', 'broken frame', 'old frame', 'slab'], area: [24, 156, 64, 24], at: [60, 186], look: 'A call frame lies cracked on the ground: parse(). It was popped off the top of the stack ages ago and fell all the way down. The return value is still sitting in it, unread.' },
     {
       id: 'tower',
-      nouns: ['tower', 'stack', 'frames', 'frame', 'call frames', 'call stack', 'main', 'init', 'parse', 'boxes', 'stack overflow', 'depth', 'recursion'],
+      nouns: ['tower', 'stack', 'frames', 'frame', 'call frames', 'call stack', 'main', 'init', 'parse', 'boxes', 'stack overflow', 'depth', 'recursion', 'warning', 'depth 9998', 'base case', 'top'],
       area: [128, 0, 72, 66],
       look: 'A tower of call frames: main() at the bottom, then init(), then parse(), which calls parse(), which calls parse(), which calls parse()... all the way up past the sky. A warning flickers at the top: DEPTH 9998. Somebody forgot the base case, and the stack is two frames from overflowing.',
     },
@@ -429,10 +442,10 @@ export const stack: RoomDef = {
           ? 'The Oracle: a giant face glowing green inside an enormous 1987 CRT monitor, which is also, structurally, the foundation of the entire tower. Its eyes follow you with mild interest. You have the reputation now. ASK ORACLE ABOUT something.'
           : 'The Oracle: a giant face glowing green inside an enormous 1987 CRT monitor, which is also, structurally, the foundation of the entire tower. It has seen every question ever asked, and has found most of them to be duplicates. Its eyes follow you, unimpressed.',
     },
-    { id: 'ghost', area: [220, 72, 32, 56], when: (g) => !g.flag('vim_solved'), look: 'A translucent ghost process, PID 1991, hovering just above the floor and clutching its head. Beneath it trails a column of little blue tildes, and at the bottom, blinking forever: -- INSERT --. It has been stuck in Vim since 1991.' },
+    { id: 'ghost', nouns: GHOST_NOUNS, area: [220, 72, 32, 56], when: (g) => !g.flag('vim_solved'), look: 'A translucent ghost process, PID 1991, hovering just above the floor and clutching its head. Beneath it trails a column of little blue tildes, and at the bottom, blinking forever: -- INSERT --. It has been stuck in Vim since 1991.' },
     {
       id: 'board',
-      nouns: ['board', 'reputation', 'rep', 'scoreboard', 'reputation board', 'number', 'gold badge'],
+      nouns: ['board', 'reputation', 'rep', 'scoreboard', 'reputation board', 'number', 'gold badge', 'coin', 'gold coin', 'medal', 'your reputation'],
       area: [20, 56, 78, 74],
       at: [59, 140],
       look: (g) => (g.flag('vim_solved') ? 'A board reads YOUR REPUTATION: 51. Fifty-one! Enough to ask a question. Not enough to vote to close one, which is probably for the best.' : 'A board reads YOUR REPUTATION: 1. One point, awarded for existing. It is not enough to do anything at all.'),
@@ -440,8 +453,8 @@ export const stack: RoomDef = {
   ],
   exits: [{ area: [314, 132, 6, 57], to: 'forest', at: [18, 165, 'right'], dir: 'east' }],
   nouns: {
-    ghost: ['ghost', 'process', 'pid', 'pid 1991', '1991', 'spirit', 'phantom', 'specter', 'spectre', 'ghost process', 'poor process'],
-    vim: ['vim', 'vi', 'editor', 'insert mode'],
+    ghost: GHOST_NOUNS,
+    vim: ['vim', 'vi', 'editor', 'insert mode', 'insert', 'file', 'config file', 'config', 'typo', 'text editor'],
   },
   verbs: {
     // ---- the ghost
@@ -487,7 +500,13 @@ export const stack: RoomDef = {
       if (!ghost(g)) return false;
       await g.say('Your hand passes straight through the ghost. It shivers. "Please. I don\'t need a hug. I need a COMMAND."');
     },
-    'look vim': 'Vim: a text editor of enormous power, which the ghost has been unable to leave for thirty-five years. Leaving Vim is, famously, the hardest thing in computing.',
+    'look vim': async (g, c) => {
+      if (['file', 'config file', 'config', 'typo'].includes(c.nounWord ?? '')) {
+        if (!ghost(g)) return void (await g.say('Whatever was in that config file, it was saved on the way out. The typo, presumably, is still there. Some things are forever.'));
+        return void (await g.say('You can\'t see the file itself, only the ghost\'s view of it: a column of blue tildes, and at the bottom, blinking forever, -- INSERT --. Somewhere in there is one typo from 1991 and thirty-five years of desperate "exit"s.'));
+      }
+      await g.say('Vim: a text editor of enormous power, which the ghost has been unable to leave for thirty-five years. Leaving Vim is, famously, the hardest thing in computing.');
+    },
     // ---- the Oracle
     'talk oracle|computer': async (g) => {
       await talkOracle(g);
@@ -532,6 +551,7 @@ export const stack: RoomDef = {
     ...CYBER_VERBS,
   },
   raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (isVimAnswer(text)) {
       if (!ghost(g)) {
@@ -560,6 +580,18 @@ export const stack: RoomDef = {
       }
       if (/^(say |tell ghost |type )?["']?(exit|quit|q|stop|close|bye|logout|leave)["']?\s*$/.test(t) || /^(tell|say to) ghost (to )?(exit|quit|leave)/.test(t)) {
         await g.talk(ghost(g)!, 'I TRIED THAT! It just typed it into the file! The file now ends with "exit quit stop close bye PLEASE HELP". Thirty-five years of "exit"s!');
+        return true;
+      }
+      if (/^(tell|say to|ask) (the )?(ghost|process|pid)( 1991)? (to )?(press |hit |push |type )?(the )?(esc|escape)( key)?$/.test(t) || /^(say|type) (esc|escape)$/.test(t)) {
+        await g.talk(ghost(g)!, "Escape! Okay! *tap* -- INSERT -- is gone! I'm out of INSERT mode! ...But I'm STILL IN VIM! Good start, but what's the COMMAND?!");
+        return true;
+      }
+      if (/\b(save and (quit|exit|close|leave)|write and (quit|exit)|save then (quit|exit)|save and get out)\b/.test(t)) {
+        await g.talk(ghost(g)!, "SAVE AND QUIT! YES! That is EXACTLY what I want! But WHAT DO I TYPE?! Tell me the actual keys! I just know it involves a colon...");
+        return true;
+      }
+      if (/^(tell|teach|show|explain to|help) (the )?(ghost|process|pid)\b.*\bhow\b/.test(t) || /^(tell|teach|show) (the )?(ghost|process|pid)\b.*\b(exit|quit|leave|get out)\b.*\b(vim|editor)\b/.test(t)) {
+        await g.talk(ghost(g)!, "You KNOW?! Then tell me EXACTLY what to type! Every keystroke! Just SAY it and I'll type it!");
         return true;
       }
       if (/^(say|tell ghost|tell) /.test(t) && /\b(nano|emacs|notepad|vscode|code)\b/.test(t)) {

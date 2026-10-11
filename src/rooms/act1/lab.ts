@@ -10,6 +10,7 @@ import { shadow, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 import { HALL_ARRIVE } from './hallway';
+import { act1Raw, readAsLook, topicOf, topicLine, type Topics } from './natural';
 
 const SEAM = 104;
 const BENCH = { x: 100, z: 121, w: 124, h: 18, depth: 6 };
@@ -256,6 +257,23 @@ const AFTER = [
   "Don't use the helmet up here. Without the Monolith on the other end, it's a very expensive hat. It also gives you a very funny haircut.",
 ];
 
+const KRISHNA_TOPICS: Topics = [
+  [/adriana|architect|vitals|heart/, "She took the v1 prototype down to the Monolith three hours ago, before the crash, to chase a weird date bug. She plugged in and hasn't come out. Her vitals are fine. She's just... in there."],
+  [/denis|dennis|greybeard|graybeard|sysadmin/, 'Denis has been looking after the Monolith since before I was born. He has every cable ever made. I once asked him for a FireWire 400 to 800 adapter, and he handed it to me without looking.'],
+  [/battery|power ?bank|power|mah|milliamp|charge|brick|juice/, (g) => (g.flag('helmet_given') ? 'Forty thousand milliamp-hours, wired straight into the helmet. If the building blinks, you won\'t.' : g.has('powerbank') ? 'Is that a power bank in your hand? How many milliamp-hours? No, don\'t tell me. Just GIVE it to me.' : "Twenty thousand milliamp-hours, minimum. A phone power bank is usually ten. I need something absurd. Something a person who is constantly on their phone, selling things, would carry.")],
+  [/helmet|ndi|interface|prototype|v2|v1/, (g) => (g.flag('helmet_given') ? "Wear it at the Monolith, not before. Plug it into her serial port with Denis's adapter, then put it on. And try to come back with all your memories." : 'Neural Debugging Interface, version two. Better shielding, a proper logout routine, and a stylish chin strap. It just needs a big enough battery.')],
+  [/adapter|db ?25|serial|port|cable/, "The Monolith's port is a DB-25 serial port from 1987. Nobody has a DB-25. Except Denis. Denis has everything. Denis IS an adapter."],
+  [/monolith|mainframe|outage|production|down|panic/, "The NDI translates a system's state into something your brain understands: places, people, objects. The Monolith's code is so old I expect it will look... medieval. With dragons. Probably dragons."],
+  [/arm|robot|gerald/, 'His name is Gerald. Do not make eye contact.'],
+  [/printer|3d|duck/, "I'm printing a rubber duck. For science. And for luck. Mostly for luck. It'll be done Tuesday."],
+  [/whiteboard|brain|diagram|cortex|science/, "That's the debugging cortex. I discovered it last week. Well. Named it. Discovering is a strong word."],
+  [/mike|sales|quantum/, "Mike? Lovely man. Sold a client a feature called 'Quantum Sync' this morning. I've been asked to build it. I don't know what it is."],
+  [/keyboard|rgb|nicholas|nick/, "Nicholas's keyboards? Lovely LEDs. Terrible batteries for my purposes. I need twenty thousand milliamp-hours, not twenty thousand colors."],
+  [/fahim|phil|aidan/, "Lovely people. All of them. Very stressed, tonight. I'd offer them the helmet, but I think they're all stressed enough already."],
+  [/safe|danger|risk|unsafe|die|death/, "Safe? Define safe. It's safe in the sense that nobody has died. Adriana is the first test subject, and she's alive. Technically you'd be the second."],
+  [/drawer|despair/, 'The Cable Drawer of Despair. Every cable except the one you need. That is its curse.'],
+];
+
 async function approachKrishna(g: Game) {
   const k = g.actor('krishna');
   if (!k) return;
@@ -492,24 +510,18 @@ export const lab: RoomDef = {
       s.plot(STAND.x + 13, STAND.z - 4, Math.floor(t / 30) % 2 ? 11 : 9);
     }
   },
-  nouns: { ...BASE_NOUNS, ...itemNouns(['powerbank', 'phone', 'esckey', 'candy', 'coffee', 'duck', 'keycard', 'badge']), ...COMPUTER_NOUNS },
+  nouns: { ...BASE_NOUNS, ...itemNouns(['powerbank', 'phone', 'esckey', 'candy', 'coffee', 'duck', 'keycard', 'badge']), ...COMPUTER_NOUNS, stool: ['stool', 'chair', 'seat'], krishna: ['krishna', 'guy', 'man', 'dude', 'scientist', 'lab coat', 'person', 'someone', 'somebody', 'researcher', 'engineer', 'doctor', 'doc'] },
+  raw: (g, text) => act1Raw(g, text),
   verbs: {
     'look krishna': async (g) =>
       g.say(
         "Krishna: R&D genius, glasses, crisp white lab coat with seven pens in the pocket. He has the delighted, slightly unhinged look of a man whose experiment is about to get its first real test. You suspect you are the experiment.",
       ),
-    'talk krishna,ask krishna ?,tell krishna ?,say krishna,hello krishna': async (g, c) => {
+    'talk krishna,ask krishna ?,tell krishna ?,say krishna,hello krishna,help krishna': async (g, c) => {
       await approachKrishna(g);
-      const topic = c.noun2 ?? '';
-      const topics: Record<string, string> = {
-        adriana: "She took the v1 prototype down to the Monolith three hours ago, before the crash, to chase a weird date bug. She plugged in and hasn't come out. Her vitals are fine. She's just... in there.",
-        denis: 'Denis has been looking after the Monolith since before I was born. He has every cable ever made. I once asked him for a FireWire 400 to 800 adapter, and he handed it to me without looking.',
-        helmet: 'Neural Debugging Interface, version two. Better shielding, a proper logout routine, and a stylish chin strap.',
-        arm: 'His name is Gerald. Do not make eye contact.',
-        mike: "Mike? Lovely man. Sold a client a feature called 'Quantum Sync' this morning. I've been asked to build it. I don't know what it is.",
-      };
-      if (topic && topics[topic]) {
-        await g.talk('krishna', topics[topic]);
+      const line = topicLine(g, topicOf(c), KRISHNA_TOPICS);
+      if (line) {
+        await g.talk('krishna', line);
         return release(g);
       }
       if (g.flag('helmet_given')) {
@@ -639,5 +651,9 @@ export const lab: RoomDef = {
     'take poster': 'EYES stays on the wall. EYES is watching.',
     'sit,sit *': "The only chair in the lab is a stool with three legs of different lengths. Krishna claims it's an 'active sitting experience.' You stay standing.",
     'smell,smell ?': 'The lab smells like solder, hot plastic, and faintly of ozone from the helmet. It smells like the future, if the future were slightly on fire.',
+    'look window,look/through window,open window': "The lab has no windows. Krishna says natural light interferes with the experiments. Mostly it interferes with Krishna.",
+    'look adriana': 'Adriana isn\'t here. Her vitals are, though: on the wall monitor, a steady green heartbeat and the words VITALS OK. Wherever she is, she is thinking very hard.',
+    'look stool': "A lab stool with three legs of different lengths. Krishna calls it an 'active sitting experience.'",
+    'read *': readAsLook,
   },
 };

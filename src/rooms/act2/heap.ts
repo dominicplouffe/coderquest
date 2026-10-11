@@ -6,7 +6,7 @@ import { Actor } from '../../engine/actor';
 import { Surface, rng } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
 import { starfield } from '../../art/lib';
-import { neonGrid, gridPulse, driftBits, twinkle, microOutlined, CYBER_VERBS } from '../../art/cyber_c_kit';
+import { neonGrid, gridPulse, driftBits, twinkle, microOutlined, CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 import { junkPile, junkItem } from '../../art/cyber_c_junk';
 import { gcImg, GcPose } from '../../art/creatures_c';
 import { award } from '../../content/points';
@@ -498,12 +498,12 @@ export const heap: RoomDef = {
     { id: 'sky', nouns: ['sky', 'stars', 'space'], area: [0, 16, 320, 24], look: 'A black sky, faintly lit by the glow of 64 kilobytes of overcommitted memory.' },
     {
       id: 'gauge',
-      nouns: ['gauge', 'bar', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph', 'heap bar'],
+      nouns: ['gauge', 'bar', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph', 'heap bar', '0x0000', '0xffff', 'addresses', 'memory', '98', '98 used', 'heap 98 used'],
       area: [6, 1, 308, 17],
       look: 'A memory map stretches across the sky from 0X0000 to 0XFFFF: red where memory is allocated, black where it is free, and a fine confetti of fragments everywhere else. HEAP: 98% USED. Somebody should really look into that. Somebody, in fact, is.',
     },
     { id: 'hourglass', nouns: ['hourglass', 'giant hourglass', 'cursor', 'wait cursor', 'sand'], area: [142, 36, 44, 50], look: 'A colossal hourglass cursor, half-buried in the far junk. It has been waiting for a process to finish since 1993. The process is never going to finish.' },
-    { id: 'piles', nouns: ['junk', 'piles', 'pile', 'garbage', 'trash', 'objects', 'mountains', 'heap', 'debris', 'rubbish', 'arrays', 'strings', 'icons', 'array', 'string'], area: [0, 40, 320, 92], look: 'Heaps of discarded objects: arrays nobody indexes, strings nobody reads, icons from operating systems nobody runs. Each one was important to someone, once. Then the last pointer to it went out of scope.' },
+    { id: 'piles', nouns: ['junk', 'piles', 'pile', 'garbage', 'trash', 'objects', 'object', 'mountains', 'heap', 'debris', 'rubbish', 'arrays', 'strings', 'icons', 'array', 'string', 'icon', 'junk pile', 'junk piles', 'stuff', 'things', 'orphans', 'orphaned objects'], area: [0, 40, 320, 92], look: 'Heaps of discarded objects: arrays nobody indexes, strings nobody reads, icons from operating systems nobody runs. Each one was important to someone, once. Then the last pointer to it went out of scope.' },
     { id: 'floppy', nouns: ['floppy', 'broken floppy', 'giant floppy', 'disk', 'disks', 'floppies'], area: [224, 52, 40, 40], look: 'A giant floppy disk juts out of the far junk at an angle, cracked clean through. Whatever was on it is now a cautionary tale about backups.' },
     {
       id: 'sign',
@@ -515,13 +515,14 @@ export const heap: RoomDef = {
     { id: 'road', nouns: ['road', 'path', 'data path'], area: [0, 156, 92, 16], look: 'The glowing road from the Boot Sector runs a little way into the Heap, then gives up, buried under junk.' },
     { id: 'boot_sign', nouns: ['boot sign', 'exit sign', 'arrow', 'neon sign'], area: [6, 124, 36, 26], look: 'A neon sign pointing west: "<- BOOT". Back the way you came.' },
     { id: 'jarpile', nouns: ['small pile', 'little pile', 'jar pile', 'toolbar'], area: [76, 112, 48, 22], look: (g) => (g.flag('jar_taken') ? 'A little pile of junk, topped by a browser toolbar. There is a jar-shaped gap where the jar used to be.' : 'A small pile of junk, topped by an old browser toolbar. Wedged on top of it is a glass jar.') },
-    { id: 'jar', nouns: ['jar', 'glass jar', 'unit test', 'test jar', 'unit test jar', 'glass', 'test'], area: [93, 98, 15, 18], at: [112, 137], when: (g) => !g.flag('jar_taken'), look: 'A glass jar with a screw-top lid, labelled TEST in neat handwriting. A Unit Test Jar! Somebody threw it in the Heap to "ship faster." It is completely empty and spotlessly clean, which tells you everything about how often it was used.' },
+    { id: 'jar', nouns: ['jar', 'glass jar', 'unit test', 'test jar', 'unit test jar', 'glass', 'test', 'glint', 'glinting', 'glinting thing', 'glassy', 'glassy thing', 'glass thing', 'something glassy', 'something glinting', 'shiny thing', 'something shiny', 'shiny', 'something'], area: [93, 98, 15, 18], at: [112, 137], when: (g) => !g.flag('jar_taken'), look: 'A glass jar with a screw-top lid, labelled TEST in neat handwriting. A Unit Test Jar! Somebody threw it in the Heap to "ship faster." It is completely empty and spotlessly clean, which tells you everything about how often it was used.' },
   ],
   exits: [{ area: [0, 128, 6, 61], to: 'boot', at: [302, 160, 'left'], dir: 'west' }],
   nouns: {
     bits: ['bits', 'bytes', 'byte', 'litter', 'stray bits'],
-    gc: ['gc', 'garbage collector', 'collector', 'robot', 'trash can', 'can', 'bin', 'trashcan', 'droid', 'red eye', 'claw', 'lid'],
+    gc: ['gc', 'garbage collector', 'collector', 'robot', 'trash can', 'can', 'bin', 'trashcan', 'droid', 'red eye', 'claw', 'lid', 'bot', 'truck', 'treads', 'antenna'],
   },
+  raw: (g, text) => cyberRaw(g, text),
   verbs: {
     // ---- the badge (handled here so the Collector can react)
     'wear badge,put badge self,show badge,show badge gc,give badge gc,use badge,use badge gc,show badge self': async (g) => {
@@ -596,7 +597,7 @@ export const heap: RoomDef = {
       await g.say('You give the Garbage Collector a kick. CLANG. Its eye swivels slowly toward you.\n\n"REFERENCE COUNT DECREMENTED."\n\nYou decide to stop doing that.');
     },
     'open gc,look/in gc': 'You do not want to know what is in there. Actually, you do know: everything nobody wanted. That is precisely why you do not want to look.',
-    'give * gc,put * gc,throw * gc': async (g, c) => {
+    'give * gc,put * gc,throw|flip * gc': async (g, c) => {
       if (!c.noun || !g.has(c.noun)) return false;
       await g.say(`The Garbage Collector's lid flips open hungrily. You snatch the ${g.items[c.noun]?.name ?? 'thing'} back just in time. It's still referenced (by you), and you'd like to keep it that way.`);
     },

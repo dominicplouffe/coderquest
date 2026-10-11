@@ -26,6 +26,8 @@ import {
   aidanCrouch, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
+import { act1Raw, readAsLook, rerun, topicOf, topicLine, type Topics } from './natural';
+import { normalize } from '../../engine/parser';
 
 // ---- geometry
 const SEAM = 100; // back wall / floor seam
@@ -168,12 +170,10 @@ function paint(p: Surface, g: Game) {
   officeWindow(p, 124, 18, 104, 40, { seed: 51, time: 'dusk', panes: 3 });
 
   // DAYS SINCE LAST OUTAGE sign
-  p.rect(238, 18, 44, 30, 15);
-  p.frame(238, 18, 44, 30, 0);
-  p.rect(239, 19, 42, 6, 2);
-  p.micro(242, 20, 'SAFETY', 15);
-  p.micro(241, 27, 'DAYS SINCE', 0);
-  p.micro(241, 33, 'LAST OUTAGE', 0);
+  p.rect(234, 18, 48, 30, 15);
+  p.frame(234, 18, 48, 30, 0);
+  p.rect(235, 19, 46, 6, 2);
+  for (const [txt, ty, col] of [['SAFETY', 20, 15], ['DAYS SINCE', 27, 0], ['LAST OUTAGE', 33, 0]] as const) p.micro(258 - Math.floor(microWidth(txt) / 2), ty, txt, col);
   p.rect(254, 38, 12, 9, 0);
   p.frame(253, 37, 14, 11, 8);
   // (the digit itself is drawn by the overlay so it can blink)
@@ -218,7 +218,7 @@ function paint(p: Surface, g: Game) {
     p.rect(240, mTop - 5, 7, 2, 8);
     // business card stack, papers
     p.rect(250, mTop - 1, 6, 2, 15);
-    p.rect(264, mTop, 8, 2, 7);
+    p.rect(264, mTop - 2, 8, 2, 7);
     if (!mikeHere) {
       // a lonely headset waits
       p.plot(260, mTop - 3, 8);
@@ -379,6 +379,54 @@ const MIKE_LINES = [
   "How's the power bank treating you? Forty thousand milliamp-hours. That thing could jump-start a car. I know because I tried. Don't tell Krishna.",
 ];
 
+// "ask X about Y": what each of them actually knows about things
+const AIDAN_TOPICS: Topics = [
+  [/runbook|step (four|4)|steps|instructions/, "Step four: 'Restart the Monolith.' Step five: 'Pray.' I thought step five was a joke too. I'm starting to see a pattern."],
+  [/deploy|typo|comment|readme|commit|change|diff/, "The deploy only changed one comment. A typo in the README: 'teh' to 'the.' The postmortem is going to say: root cause, unknown. Trigger, one very small typo fix."],
+  [/button|red button|restart|reboot/, 'There was a big red button that said RESTART, and the runbook said to restart, so... I pressed it. It felt so official.'],
+  [/denis|dennis|basement|onboarding|first love|greybeard|graybeard/, "Denis is the guy in the basement. At onboarding he showed us a photo of some ancient computer and called it 'my first love.' I thought that was a bit too."],
+  [/monolith|mainframe|machine/, "If you see the Monolith, tell it I'm sorry. Is that weird? That's weird. Don't tell it."],
+  [/postmortem|post mortem|incident|doc|report|timeline/, "Section one, 'What Went Well': 'the deploy itself.' Section two, 'What Went Wrong': I'm going to need more pages."],
+  [/nicholas|nick|div|css|center|keyboard/, "Nicholas has been trying to center that div since Tuesday. I offered to help on Wednesday. He couldn't hear me."],
+  [/phil|ceo|boss|rules/, "At onboarding Phil gave us each a laminated copy of the rules. Forty pages. I read all of them. That's kind of how we got here."],
+  [/fahim|noc|on ?call|sre|pager/, "Fahim has been on call since Wednesday. He told me never to deploy on a Friday. I thought he meant, like, philosophically."],
+  [/mike|sales/, "Mike says I have 'closer energy.' I don't know what that means. I think it's good?"],
+  [/krishna|lab|helmet|ndi/, "Krishna showed me his brain helmet once. He asked if I wanted to try it. I said maybe after my first deploy. ...Huh."],
+  [/adriana|architect/, "Adriana went down to the basement this afternoon to chase some date bug. She said she'd be right back. That was before... you know. Everything."],
+  [/coffee|teapot|caffeine/, "The coffee machine thinks it's a teapot now. Is that my fault too? Don't answer that."],
+  [/friday|rule/, "Never deploy on a Friday? Nobody TOLD me that! ...Okay, it's on a banner in the NOC. And on your monitor. And it's Rule Number One."],
+  [/outage|production|prod|down|panic|error|dashboard/, 'Every dashboard is red. I refreshed them forty times. They got more red.'],
+  [/duck/, "You carry a rubber duck? For debugging? That is so cool. I want a duck."],
+  [/^(you|yourself|aidan|intern|internship|job|work)\b/, "This is my first internship. It's going great. Apart from the part where I took down production."],
+];
+
+const NICK_TOPICS: Topics = [
+  [/div|css|center|centre|flex|margin|align|layout|html/, (g) => (g.flag('nick_helped') ? "display: flex. justify-content: center. align-items: center. It's tattooed on my soul now. And framed." : "I tried EVERYTHING. margin: 0 auto. position: absolute, top: 50%, translate minus fifty. I tried a TABLE. You've done this before, right? Didn't you write it down for me once?")],
+  [/note|sticky|post ?it/, (g) => (g.has('note') ? 'Is that... THE note? In your handwriting? Dominic. Give it here.' : g.flag('nick_helped') ? "I'm framing it. Museum glass. Maybe a little spotlight." : "You wrote it down for me once, I'm sure of it. On a sticky note. You stick everything on sticky notes.")],
+  [/keyboard|keyboards|rainbow|rgb|switch|keycap|keeb|led/, (g) => (g.flag('nick_helped') ? "How's the Rainbow Warrior? If you're going anywhere dark, turn it on. It's brighter than my future, and my future just got very bright." : "Thirty-eight keyboards. Thirty-seven, plus the Rainbow Warrior, my spare: more LEDs than a Christmas tree. Center this div for me and it's yours. I'm serious.")],
+  [/light|dark|flashlight|torch|glow|stair/, (g) => (g.flag('nick_helped') ? 'Dark? Turn on the Rainbow Warrior. TURN IT ON. Enough LEDs to land a plane.' : "You need light? I have LEDs. So many LEDs. My spare keyboard could light a stadium. I'd trade it for one centered div.")],
+  [/headphone|music|synthwave/, "Synthwave. It's the only genre that truly understands CSS."],
+  [/aidan|intern/, 'Aidan offered to help with my div on Wednesday. I couldn\'t hear him. I feel kind of bad about that now.'],
+  [/monolith|outage|production|prod|down|red|panic|alert/, "Everything's red? I thought it was a new theme. I kind of like it. Very dramatic."],
+  [/phil|ceo|boss/, "Phil asked me to make the website 'pop' for the investors. I asked what pop means. He said, 'You know. POP.'"],
+  [/mike|sales|quantum/, "Mike sold someone a 'quantum-centered layout' this morning. I can barely do a regular centered layout."],
+  [/krishna|helmet|lab|brain/, "Krishna's been building some kind of brain helmet in the lab. Don't put it on. Or do. I'm a frontend guy, what do I know about brains."],
+  [/fahim|noc|on ?call/, "Fahim's been on call since Wednesday. I'd bring him a coffee, but the coffee machine thinks it's a teapot."],
+  [/coffee|teapot|418/, "The coffee machine is throwing a 418. I'm a teapot. Honestly? I respect it. It knows who it is."],
+  [/denis|dennis|basement/, 'Denis? The basement guy? He once fixed my laptop by glaring at it.'],
+  [/adriana|architect|whiteboard|diagram/, "Adriana drew that architecture diagram. Well, the boxes. Somebody else added the question marks. Everybody else, really."],
+];
+
+const MIKE_OFFICE_TOPICS: Topics = [
+  [/power ?bank|battery|charger|mah|brick/, "How's the power bank treating you? Forty thousand milliamp-hours. That thing could jump-start a car. I know because I tried. Don't tell Krishna."],
+  [/candy|break|bar|snack|vending|chocolate/, "Best BREAK! of my life, Dom. Two-for-one. I'm telling this story at every sales retreat until I die."],
+  [/sales|deal|gary|client|quantum|sync|customer/, 'I sold a client a feature called "Quantum Sync" this morning. Can you guys build that by Monday? No? Tuesday? I said Monday.'],
+  [/monolith|outage|production|down|demo|investor/, "Outage? What outage? (into the phone) No, Gary, it's a planned resilience exercise. Very forward-thinking."],
+  [/phil|ceo|boss/, "Phil's on with the investors. I offered to take the call. He said, and I quote, 'Absolutely not, Mike.'"],
+  [/trophy|award/, "Salesperson of the Year, 2019. The other trophies are on back order. Six years of back order. Supply chain, Dom."],
+];
+
+
 function cycle(g: Game, key: string, list: string[]): string {
   const i = (g.flag(key) ?? 0) % list.length;
   g.inc(key);
@@ -405,6 +453,12 @@ export const office: RoomDef = {
     [300, 172, 20, 18], // foreground plant
   ],
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
+    // "it's not your fault, Aidan" and friends
+    if (!g.flag('aidan_comforted') && /aidan|aiden|intern/i.test(text) && /not your fault|its ok|it s ok|okay|dont worry|don t worry|blameless|it happens|no big deal|relax|come out|its fine|it s fine|not mad/i.test(normalize(text))) {
+      await rerun(g, 'comfort aidan');
+      return true;
+    }
     if (/^\s*(erase|wipe|clean|scrub)\b/i.test(text)) {
       await g.approach('whiteboard');
       await g.say("You reach for the eraser, then stop. That diagram is the only documentation the Monolith has had since 1987. Erasing it would be a crime against archaeology.");
@@ -419,7 +473,7 @@ export const office: RoomDef = {
   hotspots: [
     {
       id: 'whiteboard',
-      nouns: ['whiteboard', 'white board', 'board', 'diagram', 'architecture', 'architecture diagram', 'drawing', 'boxes', 'arrows', 'marker'],
+      nouns: ['whiteboard', 'white board', 'board', 'diagram', 'architecture', 'architecture diagram', 'drawing', 'boxes', 'arrows', 'marker', 'question marks', 'question mark', 'red question marks'],
       area: [40, 22, 76, 46],
       at: [76, 110],
       look: 'A whiteboard titled ARCHITECTURE. In the middle: a big box labeled MONOLITH. Around it, a little box for every system the company owns, with arrows pointing at the Monolith from every direction. One arrow just points at a large red "???".\n\nIt is, by a wide margin, the most accurate architecture diagram in the company.',
@@ -427,7 +481,7 @@ export const office: RoomDef = {
     {
       id: 'outagesign',
       nouns: ['sign', 'outage sign', 'safety sign', 'counter', 'days since last outage', 'days', 'number', 'zero'],
-      area: [237, 17, 46, 32],
+      area: [233, 17, 50, 32],
       at: [226, 112],
       look: 'DAYS SINCE LAST OUTAGE: 0.\n\nSomeone already reset it. Underneath, in faded Sharpie: "Personal best: 41 (2014)."',
     },
@@ -568,7 +622,7 @@ export const office: RoomDef = {
     },
     {
       id: 'lobbydoor',
-      nouns: ['doorway', 'lobby', 'elevator lobby', 'exit', 'exit sign', 'hallway'],
+      nouns: ['doorway', 'lobby', 'elevator lobby', 'exit', 'exit sign', 'hallway', 'elevator', 'elevators', 'lift', 'lifts', 'hall'],
       area: [292, 56, 24, 68],
       at: [302, 132],
       look: 'The doorway to the elevator lobby. The EXIT sign above it is still lit, which makes it the most optimistic thing on the floor.',
@@ -600,6 +654,9 @@ export const office: RoomDef = {
     ...itemNouns(['note', 'keyboard', 'duck', 'mug', 'coffee', 'candy', 'powerbank']),
     ...COMPUTER_NOUNS,
     headphones: ['headphones', 'headphone', 'red headphones', 'cans', 'music', 'synthwave'],
+    people: ['people', 'guy', 'guys', 'man', 'dude', 'person', 'coworker', 'coworkers', 'colleague', 'colleagues', 'someone', 'somebody', 'everyone', 'everybody', 'employees', 'team'],
+    aidan: ['aidan', 'aiden', 'intern', 'sniffling', 'sniffles', 'crying', 'sobbing', 'someone sniffling', 'red cap', 'cap'],
+    button: ['button', 'buttons', 'elevator button', 'call button'],
     desk: ['desk', 'desks', 'table', 'workstations'],
     chair: ['chair', 'chairs', 'office chair'],
     drawer: ['drawer', 'drawers', 'desk drawer'],
@@ -678,7 +735,9 @@ export const office: RoomDef = {
     }
   },
   verbs: {
-    'look desk': async (g) => {
+    'look desk': async (g, c) => {
+      if (c.nounWord === 'desks' || c.nounWord === 'workstations')
+        return void (await g.say("Forty desks, most of them abandoned for the weekend. Three are occupied, in a manner of speaking: Nicholas's keyboard shrine on the left, Aidan's desk in the middle (with Aidan " + (g.flag('aidan_comforted') ? 'back at it' : 'under it') + "), and Mike's sales corner by the exit."));
       const x = g.player.x;
       const id = x < 150 ? 'nickdesk' : x < 230 ? 'aidandesk' : 'mikedesk';
       const hs = office.hotspots!.find((h) => h.id === id)!;
@@ -718,12 +777,16 @@ export const office: RoomDef = {
           : "Mike isn't at his desk. Judging by the faint shouting coming from the direction of the break room, he's found something to argue with.",
       ),
     // ---------------- Nicholas
-    'talk nicholas,ask nicholas ?,tell nicholas ?,say nicholas': async (g) => {
+    'talk nicholas,ask nicholas ?,tell nicholas ?,say nicholas': async (g, c) => {
       await approachNick(g);
       if (!g.flag('nick_attention')) {
-        await g.say("He can't hear you over his music. You can hear it, though: synthwave, at a volume that violates several OSHA guidelines.");
+        await g.say("He can't hear you over his music. You can hear it, though: synthwave, at a volume that violates several OSHA guidelines. You'd have to TAP him on the shoulder.");
         return;
       }
+      const topic = topicOf(c);
+      const line = topicLine(g, topic, NICK_TOPICS);
+      if (line) return void (await nickChat(g, [['nicholas', line]]));
+      if (topic && c.verb === 'ask') return void (await nickChat(g, [['nicholas', 'No idea, man. Ask me about CSS. Or keyboards. Mostly keyboards.']]));
       if (!g.flag('nick_helped')) {
         await nickChat(
           g,
@@ -797,12 +860,14 @@ export const office: RoomDef = {
       await g.say("Typing on a coworker's computer while they're sitting right there is a fireable offense in at least three countries. Besides, every machine on this floor just says MONOLITH UNREACHABLE.");
     },
     // ---------------- Aidan
-    'talk aidan,comfort aidan,hug|touch|tap aidan,tell aidan ?,ask aidan ?,say aidan,apologize aidan,thank aidan,help aidan': async (g) => {
+    'talk aidan,comfort aidan,hug|touch|tap aidan,tell aidan ?,ask aidan ?,say aidan,apologize aidan,thank aidan,help aidan': async (g, c) => {
       await approachAidan(g);
       if (g.flag('aidan_comforted')) {
         const a = g.actor('aidan');
         if (a) a.dir = 'right';
-        await g.talk('aidan', cycle(g, 'aidan_talk_i', AIDAN_AFTER));
+        const topic = topicOf(c);
+        const line = topicLine(g, topic, AIDAN_TOPICS) ?? (topic && c.verb === 'ask' ? "Um. I'm an intern. I don't know anything about that. I barely know about the things I know about." : null);
+        await g.talk('aidan', line ?? cycle(g, 'aidan_talk_i', AIDAN_AFTER));
         if (a) a.dir = 'up';
         return;
       }
@@ -843,11 +908,11 @@ export const office: RoomDef = {
       await g.talk('aidan', "Oh! Um. Thanks? I'm not sure what I'd do with that. I'm not sure what I'd do with anything right now.");
     },
     // ---------------- Mike (after the candy)
-    'talk mike,ask mike ?,tell mike ?,say mike': async (g) => {
+    'talk mike,ask mike ?,tell mike ?,say mike': async (g, c) => {
       if (!g.actor('mike')) return false;
       await g.approach([246, 130]);
       g.player.faceToward(MIKE[0], MIKE[1]);
-      await seatedTalk(g, 'mike', cycle(g, 'mike_office_i', MIKE_LINES));
+      await seatedTalk(g, 'mike', topicLine(g, topicOf(c), MIKE_OFFICE_TOPICS) ?? cycle(g, 'mike_office_i', MIKE_LINES));
     },
     'give|show * mike': async (g, c) => {
       if (!g.actor('mike') || !c.noun || !g.has(c.noun)) return false;
@@ -884,6 +949,15 @@ export const office: RoomDef = {
     },
     'take light,fix light,turnon|turnoff light': "The lights are wired through the building management system, which runs on, you guessed it, the Monolith.",
     'sit,sit *': "Every chair on this floor belongs to someone who'd ask why it's warm. Besides, production is down. No sitting.",
+    'take|fix|push|pull|lift chair': async (g) => {
+      if (!g.flag('aidan_comforted')) return void (await g.say("You'd set Aidan's chair upright, but that's his call. It's his dramatic gesture. Let him have it."));
+      await g.say('The chairs are fine where they are. Even Aidan\'s is back on its wheels.');
+    },
+    'look aidanchair': async (g) => {
+      if (!g.flag('aidan_comforted')) return false;
+      await g.say("Aidan's chair, back on its wheels, with Aidan in it, typing.");
+    },
+    'listen deskphone,use|push deskphone voicemail': "You'd need Mike's voicemail PIN. It's probably 1-2-3-4. It's definitely 1-2-3-4. But the phones run through the Monolith, so all you'd hear is silence.",
     'take aidanchair,fix aidanchair,push|pull aidanchair': "You'd set it upright, but that's Aidan's call. It's his dramatic gesture. Let him have it.",
     'take nickscreen|aidanscreen|cubicles': 'Every monitor in this building is cable-locked to a desk. Ever since the Great Monitor Heist of 2019.',
     'look door': async (g) => {
@@ -911,6 +985,19 @@ export const office: RoomDef = {
     },
     'look/through window': 'The sun is setting over the city. Long shadows, pink sky, everyone else on their way to dinner. You have a date with a mainframe.',
     'look headphones': "Nicholas's enormous red over-ear headphones. Studio-grade. Noise-cancelling. Dominic-cancelling.",
-    'look computer,use|take|turnon|reboot computer': "Every computer on this floor shows the same thing: MONOLITH UNREACHABLE. Turning them off and on again won't help. You checked. Twice.",
+    'look computer,use|take|turnon|reboot computer,read computer': "Every computer on this floor shows the same thing: MONOLITH UNREACHABLE. Turning them off and on again won't help. You checked. Twice.",
+    'look people': async (g) => {
+      const who = [
+        'Nicholas, at his desk, headphones on',
+        g.flag('aidan_comforted') ? 'Aidan, typing up his postmortem' : 'Aidan, hiding under his desk',
+        ...(g.actor('mike') ? ['Mike, at the sales desk, on the phone'] : []),
+      ];
+      await g.say(`Most of the floor went home at five. Still here: ${who.join('; ')}. Try TALK TO one of them by name.`);
+    },
+    'talk|ask|tell|tap people,ask|tell people ?': async (g) => {
+      await g.say(`Who? ${g.flag('nick_attention') ? 'Nicholas is at the desk with all the keyboards' : 'Nicholas is at the desk with all the keyboards, though he can\'t hear a thing through those headphones'}, ${g.flag('aidan_comforted') ? 'Aidan is back at his desk' : 'and Aidan is under his'}${g.actor('mike') ? ', and Mike is at the sales desk' : ''}. TALK TO NICHOLAS, TALK TO AIDAN...`);
+    },
+    'push|use|call button,push|use|call lobbydoor': "The elevator buttons are out in the lobby, through the doorway on the right. Not that they'll help: the elevators run on the Monolith.",
+    'read *': readAsLook,
   },
 };

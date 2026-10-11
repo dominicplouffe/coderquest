@@ -9,6 +9,7 @@ import { skyline, fluorescent } from '../../art/lib';
 import { ceilingBand, sideWallL, sideWallR, lerpY, quad, frontDesk, plaque, shadow, BASE_NOUNS, itemNouns } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
+import { act1Raw, readAsLook, topicOf, topicLine, type Topics } from './natural';
 
 const SEAM = 104;
 const LX = 26;
@@ -93,7 +94,7 @@ function paint(p: Surface, g: Game) {
     p.vline(x, 32, 34, 0);
     p.line(x, 35, x - 2, 38, 6);
   }
-  p.micro(236, 47, 'SYNERGY', 15);
+  p.micro(235, 47, 'SYNERGY', 15);
   // bookshelf
   const bx = 266,
     bw = 24;
@@ -313,6 +314,36 @@ const PHIL_BEFORE = [
   "I'd love to bend the rules, Dominic, but I wrote them. In pen. Laminated. Section four: 'The basement requires an incident report.' Section five: 'See section four.'",
 ];
 
+const PHIL_TOPICS: Topics = [
+  [/denis|dennis|greybeard|graybeard|sysadmin/, "Denis and I started this company in a garage in 1987. He wrote every line of the Monolith. I wrote the business plan on a napkin. His part turned out to be harder. He's lived down in that basement since '99. I keep telling him to take a vacation. He keeps telling me the Monolith would get lonely."],
+  [/photo|picture|1987|garage|founding|history/, "Day one. Denis and me, and the Monolith, the day we turned her on. We said we'd fix the date handling 'before it matters.' I'm sure we did. Didn't we?"],
+  [/aidan|intern|runbook/, "Poor kid. Don't tell him I said this, but he followed the runbook perfectly. I wrote that runbook. In 1999. Maybe I should update the runbook."],
+  [/fahim|sre|on ?call|noc/, "Fahim is the best SRE I've ever had. He writes beautiful incident reports. I have them framed. Well. Laminated. He's in the NOC, if he's conscious."],
+  [/krishna|lab|helmet|ndi/, "Krishna's building a helmet that lets you debug from the inside. Legal says it's fine as long as nobody uses it. So please don't tell Legal."],
+  [/adriana|architect/, "Adriana went down to the basement to look into a date bug hours ago. I'm sure she's fine. She's the smartest person in the building. Present company... included, mostly."],
+  [/mike|sales|quantum/, "Mike sold Quantum Sync to the investors. I don't know what Quantum Sync is. Neither does Mike. It's on the roadmap now."],
+  [/nicholas|nick|div|website/, "Nicholas? Lovely kid. Has he centered that thing yet? The... the box? He's been at it since Tuesday."],
+  [/golf|putt|green|putter|ball|club|trophies|trophy/, 'Golf teaches patience, Dominic. Patience, focus, and how to lose gracefully. Mostly the last one.'],
+  [/monolith|mainframe/, "The Monolith has run this company since 1987. Payroll, billing, the doors, the elevators, the coffee machine, the parking gate. Every time someone suggested replacing it, the estimate came back bigger than the company. So we... didn't."],
+  [/report|incident|paperwork|form|sev/, (g) =>
+    g.flag('phil_gave_keycard')
+      ? "Fahim's report is going in the binder. Volume twelve. Right next to his other beautiful reports."
+      : g.has('report')
+        ? "Is that it? Is that the report? Well, don't just stand there waving it around, Dominic. SHOW it to me."
+        : "An incident report, filed and signed by the on-call SRE. That's Fahim, in the NOC. He writes beautiful reports. When he's awake."],
+  [/key ?card|master key|keys?$|card|access|clearance|stair|basement|lockdown|door|elevator|permission|authori/, (g) =>
+    g.flag('phil_gave_keycard')
+      ? "The keycard opens everything: the stairwell, the basement, every door in the building. And the executive bathroom. Please. Not the executive bathroom."
+      : "My master keycard opens the stairwell and every other door in the building. It's yours the moment I see an incident report from the on-call SRE. Rules are rules. I laminated them."],
+  [/investor|henderson|demo|monday|call|phone|money|funding/, "(covering the phone) Mr. Henderson. Lead investor. He arrives Monday at nine with four colleagues and a very large checkbook. The demo has to work, Dominic. It HAS to."],
+  [/coffee|teapot|smartbrew/, "The coffee machine is on the Monolith too? Of course it is. I signed that contract myself. The SmartBrew salesman was very persuasive."],
+  [/rules|binder|rule book|policy|process|section/, "Volume twelve. I'm drafting volume thirteen: 'Rules About Rules.' It's going to be my best work."],
+  [/swear|jar|curse/, 'A dollar a swear. Tonight alone I have funded Q3 bowling and most of Q4.'],
+  [/bathroom|toilet|restroom|washroom/, "The executive bathroom is for executives. It has a heated seat. Let's not talk about the executive bathroom."],
+  [/synergy|poster/, 'Synergy, Dominic. It means we all work together. Tonight it mostly means you work and I hold the phone.'],
+  [/outage|production|prod|down|panic|crash/, "(into the phone) Yes, Mr. Henderson, everything is fine. It's a... planned... feature. (covering the phone) It is not fine, Dominic. Fix it."],
+];
+
 function cycle(g: Game, key: string, list: string[]): string {
   const i = (g.flag(key) ?? 0) % list.length;
   g.inc(key);
@@ -414,10 +445,17 @@ export const phil: RoomDef = {
     },
     {
       id: 'credenza',
-      nouns: ['credenza', 'cabinet', 'trophies', 'golf trophies', 'cabinets', 'trophy', 'tv'],
+      nouns: ['credenza', 'cabinet', 'trophies', 'golf trophies', 'cabinets', 'trophy', 'tv', 'credenza drawers', 'credenza drawer', 'sideboard'],
       area: [38, 80, 154, 28],
       at: [110, 116],
       look: 'A walnut credenza crowded with little golf trophies. CLUB CHAMPION 2003. MOST IMPROVED 2004. HONORABLE MENTION 2005. PARTICIPANT 2006 through 2025.',
+    },
+    {
+      id: 'philplant',
+      nouns: ['plant', 'potted plant', 'little plant', 'red pot', 'flower', 'flowers'],
+      area: [146, 77, 13, 15],
+      at: [150, 116],
+      look: "A small potted plant on the credenza, the only living thing in this office Phil hasn't scheduled a meeting with. It looks well-watered. Phil probably has a rule about it.",
     },
     {
       id: 'rug',
@@ -475,6 +513,7 @@ export const phil: RoomDef = {
     void g;
   },
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
     if (/^\s*(putt|golf|swing|chip|tee off)\b/i.test(text)) {
       await g.approach('putter');
       await philStops(g, 'Not the putter.');
@@ -486,6 +525,9 @@ export const phil: RoomDef = {
     ...BASE_NOUNS,
     ...itemNouns(['report', 'keycard', 'candy', 'coffee', 'duck', 'badge', 'mug']),
     plane: ['plane', 'airplane', 'jet', 'aircraft'],
+    drawer: ['drawer', 'drawers', 'desk drawer', 'desk drawers'],
+    phil: ['phil', 'guy', 'man', 'person', 'someone', 'somebody', 'ceo', 'boss', 'bald guy', 'the boss'],
+    handset: ['handset', 'cordless', 'cordless phone', 'phils phone', 'phone base', 'desk phone', 'receiver'],
     bathroom: ['bathroom', 'executive bathroom', 'restroom', 'toilet', 'washroom', 'bathroom door'],
   },
   verbs: {
@@ -495,21 +537,10 @@ export const phil: RoomDef = {
           g.flag('phil_gave_keycard') ? 'He looks a little lighter now that someone else is holding the keycard.' : 'He keeps glancing at the golf putter like it might offer some advice.'
         }`,
       ),
-    'talk phil,ask phil ?,tell phil ?,say phil,hello phil': async (g, c) => {
-      const topics: Record<string, string> = {
-        denis: "Denis and I started this company in a garage in 1987. He wrote every line of the Monolith. I wrote the business plan on a napkin. His part turned out to be harder. He's lived down in that basement since '99. I keep telling him to take a vacation. He keeps telling me the Monolith would get lonely.",
-        photo: "Day one. Denis and me, and the Monolith, the day we turned her on. We said we'd fix the date handling 'before it matters.' I'm sure we did. Didn't we?",
-        aidan: "Poor kid. Don't tell him I said this, but he followed the runbook perfectly. I wrote that runbook. In 1999. Maybe I should update the runbook.",
-        fahim: "Fahim is the best SRE I've ever had. He writes beautiful incident reports. I have them framed. Well. Laminated.",
-        krishna: "Krishna's building a helmet that lets you debug from the inside. Legal says it's fine as long as nobody uses it. So please don't tell Legal.",
-        adriana: "Adriana went down to the basement to look into a date bug hours ago. I'm sure she's fine. She's the smartest person in the building. Present company... included, mostly.",
-        mike: "Mike sold Quantum Sync to the investors. I don't know what Quantum Sync is. Neither does Mike. It's on the roadmap now.",
-        nicholas: "Nicholas? Lovely kid. Has he centered that thing yet? The... the box? He's been at it since Tuesday.",
-        green: "Golf teaches patience, Dominic. Patience, focus, and how to lose gracefully. Mostly the last one.",
-      };
-      const topic = c.noun2 && topics[c.noun2] ? c.noun2 : c.verb === 'ask' && /monolith/.test(c.raw.toLowerCase()) ? 'monolith' : '';
-      if (topic === 'monolith') return void (await philTalk(g, [['phil', "The Monolith has run this company since 1987. Payroll, billing, the doors, the elevators, the coffee machine, the parking gate. Every time someone suggested replacing it, the estimate came back bigger than the company. So we... didn't."]]));
-      if (topic) return void (await philTalk(g, [['phil', topics[topic]]]));
+    'talk phil,ask phil ?,tell phil ?,say phil,hello phil,help phil': async (g, c) => {
+      const topic = topicOf(c);
+      const line = topicLine(g, topic, PHIL_TOPICS);
+      if (line) return void (await philTalk(g, [['phil', line]]));
       if (g.flag('phil_gave_keycard')) return void (await philTalk(g, [['phil', cycle(g, 'phil_after_i', PHIL_AFTER)]]));
       if (!g.flag('phil_talked')) {
         g.set('phil_talked');
@@ -523,6 +554,7 @@ export const phil: RoomDef = {
         ]);
         return;
       }
+      if (topic && c.verb === 'ask') return void (await philTalk(g, [['phil', "(covering the phone) I'm afraid I don't know a thing about that, Dominic. Ask me about golf. Or rules. Mostly rules."]]));
       await philTalk(g, [['phil', cycle(g, 'phil_before_i', PHIL_BEFORE)]]);
     },
     'give|show report phil,put report desk,give|show report desk': async (g) => {
@@ -639,5 +671,23 @@ export const phil: RoomDef = {
     'hug phil,comfort phil': async (g) => {
       await philStops(g, "(muffled) Oh. Oh, thank you, Dominic. I needed that. Now please go fix my company.");
     },
+    'look keycard': async (g) => {
+      if (g.has('keycard')) return false;
+      await g.say("Phil's master keycard is clipped to his belt, swinging gently as he paces. It opens every door in the building. He'll hand it over for an incident report, and not one second before.");
+    },
+    'take|steal|use keycard,ask phil keycard': async (g) => {
+      if (g.has('keycard')) return false;
+      await philStops(g, g.has('report') ? "Report first, keycard second. That's the process. SHOW me the report, Dominic." : "The keycard stays on my belt until I see an incident report from the on-call SRE, Dominic. That's Fahim. In the NOC.");
+    },
+    'look phone,look handset': async (g) => {
+      await g.say(`Phil's cordless handset is clamped to his ear${g.flag('phil_gave_keycard') ? ', still' : ''}. On the other end: Mr. Henderson, the lead investor, and a great deal of synergy. Your own phone, meanwhile, is still at 0%.`);
+    },
+    'take|use handset': async (g) => {
+      await philStops(g, "I've got the handset, Dominic. I've had it for two hours. Mr. Henderson is very... thorough.");
+    },
+    'take|water|touch philplant': 'You leave the plant alone. It is thriving in here, which makes one of you.',
+    'look denis': async (g) => g.say('Denis is down in the basement. Up here, there is only young Denis, in the photo on the wall: ponytail, a pager on each hip, and a cable draped over his shoulder like a scarf, grinning in front of the Monolith in 1987.'),
+    'jump window,climb window': "The windows are sealed. Phil had them sealed after a regrettable incident involving a golf ball and the parking lot. Also: no. Absolutely not.",
+    'read *': readAsLook,
   },
 };

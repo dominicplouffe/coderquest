@@ -11,6 +11,7 @@ import { award } from '../../content/points';
 import { addNpc, convo, fidget } from '../../content/helpers';
 import { person } from '../../art/cast';
 import { playEnding } from '../../content/ending';
+import { act1Raw, readAsLook } from './natural';
 import {
   paintServerRoom,
   animateServerRoom,
@@ -535,6 +536,12 @@ async function askDenis(g: Game, c: Command) {
     line = act3(g) ? 'Sharpest architect this building ever had. Wrote the fix while two threads were sitting on her. Hmph. Kids these days. Impressive kids.' : "Smartest one of the lot. Went in three hours ago to find out what's wrong. Vitals are fine. She's just... not coming out. Something's holding her.";
   else if (has('aidan', 'intern', 'kid'))
     line = act3(g) && g.flag('y2k_told') ? "I owe that boy an apology. And a cable. Maybe two cables." : "The intern? He followed the runbook. Step four: 'Restart the Monolith.' I wrote that in 1988. As a JOKE. Nobody was supposed to actually DO it.";
+  else if (has('bug', 'heisenbug', 'butterfly', 'jar', 'patch', 'date routine', 'kingdom', 'inside', 'dragon'))
+    line = act3(g)
+      ? g.flag('y2k_told')
+        ? 'A two-digit year. Twenty-seven years I guarded that machine, and the thing eating her was MY bug all along. Hmph. Good work in there, kid.'
+        : "Well? Out with it. What WAS in there?"
+      : "Something's been chewing on her date tables since the restart. Adriana went in to find out what. Whatever it is, it's been waiting a long time.";
   else if (has('runbook', 'step four', 'joke'))
     line = "Runbook's from 1988. Step four was a joke. Step five says 'Pray.' Step six is a recipe for chili. Nobody reads past step four.";
   else if (has('helmet', 'ndi', 'krishna'))
@@ -543,6 +550,8 @@ async function askDenis(g: Game, c: Command) {
     line = act3(g) && g.flag('y2k_told') ? "Twenty-seven years I guarded that bug. Turns out you can't hide from a date. It always comes." : "Y2K? Survived it. Didn't reboot. Didn't NEED to. That's the trick: if you never reboot, nothing can go wrong. ...Until somebody reboots.";
   else if (has('cobol', 'manual', 'book'))
     line = "Volume one of seven. Most boring book ever printed. I used to read it to my cat. Cat slept for a week.";
+  else if (has('adapter', 'db25', 'serial', 'db 25') && (g.has('adapter') || g.flag('helmet_connected')))
+    line = g.flag('helmet_connected') ? "It's in her serial port, where it belongs. Most important cable ever made. Don't touch it." : "You've GOT it. Adapter goes in her serial port, the DB-25 on the front of the main cabinet. Then the helmet goes in the adapter.";
   else if (has('cable', 'cables', 'adapter', 'pegboard', 'db25', 'serial'))
     line = "Every cable ever made. RS-232, Centronics, Token Ring, SCSI. If they made it, I kept it. People laugh. Then they need a cable.";
   else if (has('reboot', 'restart', 'button'))
@@ -755,8 +764,10 @@ export const serverroom: RoomDef = {
     gertrude: ['gertrude', 'pdp', 'pdp 11', 'pdp11'],
     adrianashelmet: ['v1', 'v1 helmet', 'her helmet', 'adrianas helmet', 'prototype helmet', 'colander'],
     riddle: ['riddle', 'question', 'light bulb', 'lightbulb', 'bulb'],
+    denis: ['denis', 'dennis', 'old man', 'old guy', 'guy', 'man', 'greybeard', 'graybeard', 'sysadmin', 'beard', 'bearded guy'],
   },
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
     const t = text.toLowerCase().trim();
     // a couple of verbs the parser doesn't know
     if (/^(lie|lay|nap)\b/.test(t) && /cot|bed|down|nap/.test(t)) {
@@ -807,7 +818,7 @@ export const serverroom: RoomDef = {
         await g.say('commit 2000ad1 (HEAD -> main)\nAuthor: Dominic\n    Fix Y2K: use 4-digit years in date routine\n\ncommit 0000001\nAuthor: Denis\nDate: 1987\n    Initial commit. TODO: fix dates before 2000', { title: 'Console' });
         return true;
       }
-      if (/^(lgtm|ship it!?|lgtm!)$/.test(t)) {
+      if (/^lgtm!?$/.test(t) || (/^ship it!?$/.test(t) && !g.flag('reviewed'))) {
         await g.say(g.flag('reviewed') ? "That's what Adriana said." : "That's Adriana's line. Ask her to REVIEW it first.");
         return true;
       }
@@ -816,7 +827,7 @@ export const serverroom: RoomDef = {
   },
   verbs: {
     // ---- Denis
-    'talk denis': async (g) => {
+    'talk denis,help denis,hello denis': async (g) => {
       if (act3(g)) return talkDenisAct3(g);
       await talkDenisAct1(g);
     },
@@ -1001,6 +1012,7 @@ export const serverroom: RoomDef = {
       await g.say(act3(g) ? 'The Monolith hums: low, steady, patient. The air conditioning roars. The ramen simmers.' : "The Monolith's hum has a wobble in it, like a washing machine with a brick inside. The air conditioning roars. The ramen simmers. Denis mutters at his terminal.");
     },
     'smell,smell ?': 'Ozone, hot dust, chicken ramen, and the unmistakable smell of 1987.',
+    'read *': readAsLook,
   },
   enter(g, from) {
     // the only way in during Act II is logging out of the Core: that's Act III

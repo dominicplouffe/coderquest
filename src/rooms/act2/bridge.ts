@@ -9,6 +9,7 @@ import { dith } from '../../engine/palette';
 import { award } from '../../content/points';
 import { hash } from '../../art/creatures_d';
 import { tween, haltPlayer } from '../../art/cyber_d_lib';
+import { CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 
 // ---- bridge geometry. The list runs west (HEAD, toward the dragon) to east
 // (TAIL, at the Boot Sector). The nodes float in a gentle arch over the void.
@@ -405,7 +406,7 @@ export const bridge: RoomDef = {
   nouns: {
     zeros: ['zeros', 'zeroes', 'zero', 'falling zeros', 'rain'],
     labels: ['head', 'head node', 'tail', 'tail node', 'cafe', 'beef', 'food', 'f00d', 'dead', 'c0de', 'data', 'data fields', 'labels', 'hex'],
-    orphans: ['debris', 'orphans', 'orphaned objects', 'undefined', 'nan', 'floating text'],
+    orphans: ['debris', 'orphans', 'orphaned objects', 'undefined', 'nan', 'floating text', 'object object', 'words', 'text', 'ptr', '0xdeadbeef', 'deadbeef', 'void ptr'],
   },
   hotspots: [
     {
@@ -422,7 +423,7 @@ export const bridge: RoomDef = {
     },
     {
       id: 'castle',
-      nouns: ['castle', 'fortress', 'green castle', 'lair', 'distance'],
+      nouns: ['castle', 'fortress', 'green castle', 'lair', 'distance', 'other side', 'far side', 'dragon', 'legacy dragon', 'core'],
       area: [8, 52, 72, 60],
       look: 'Far to the west, at the end of the list, a castle glows phosphor green. Even from here you can see that its walls are written in COBOL.',
     },
@@ -439,7 +440,7 @@ export const bridge: RoomDef = {
       look: (g) =>
         g.flag('bridge_fixed')
           ? 'A bridge built as a singly linked list: HEAD, CAFE, ACED, BEEF, F00D, DEAD, C0DE, TAIL. Each node holds its data and a pointer to the next. It is, at last, fully traversable.'
-          : "A bridge built as a singly linked list. Each node is a box with a data field and a NEXT pointer: HEAD, CAFE, then... nothing. CAFE's pointer dangles into NULL. On the far side, BEEF, F00D, DEAD, C0DE and TAIL carry on as if nothing were wrong. You can't get from CAFE to BEEF without the node in between.",
+          : "A bridge built as a singly linked list. Each node is a box with a data field and a NEXT pointer: HEAD, CAFE, then... nothing. CAFE's pointer dangles into NULL. Past the gap, BEEF, F00D, DEAD, C0DE and TAIL carry on as if nothing were wrong. You can't get from CAFE to BEEF without the node in between.",
     },
     {
       id: 'arrows',
@@ -449,7 +450,7 @@ export const bridge: RoomDef = {
     },
     {
       id: 'gap',
-      nouns: ['gap', 'hole', 'null', 'missing node', 'null pointer', 'null sign', 'sign', 'mind the gap', 'empty space'],
+      nouns: ['gap', 'hole', 'null', 'missing node', 'null pointer', 'null sign', 'sign', 'mind the gap', 'empty space', 'ground symbol', 'dangling pointer', 'outline', 'dotted outline'],
       area: [GAP_X0 - 4, 112, GAP_X1 - GAP_X0 + 8, 50],
       at: [GAP_X1 + 7, deckTop(GAP_X1 + 7) + 6],
       look: (g) =>
@@ -490,12 +491,26 @@ export const bridge: RoomDef = {
   },
   overlay,
   front,
+  raw: (g, text) => cyberRaw(g, text),
   verbs: {
     // ---------------------------------------------------------------- the fix
     'put|use|drop|plug node gap|bridge|newnode|void|arrows|null,fix bridge|gap|arrows|newnode node,put|use node,fix bridge|gap|arrows|null,put node': async (g) => {
       await fixBridge(g);
     },
-    'throw node ?': "Throw the node into the void? It would fall forever and you'd still have a hole in your bridge. Put it IN the gap instead.",
+    'drop node': async (g) => {
+      if (!g.has('node')) return false;
+      await fixBridge(g);
+    },
+    'throw|flip node ?': "Throw the node into the void? It would fall forever and you'd still have a hole in your bridge. Put it IN the gap instead.",
+    'look node': async (g) => {
+      if (g.has('node')) return false;
+      if (g.flag('bridge_fixed')) return void (await g.say("The Oracle's node sits snugly in the bridge, data field glowing ACED. It's the newest thing in the whole Monolith and it knows it."));
+      await g.say("The bridge's nodes march across the void: HEAD, CAFE, then a gap where a node should be, then BEEF, F00D, DEAD, C0DE and TAIL. CAFE's NEXT pointer dangles into NULL. You'd need a spare node to fill the gap.");
+    },
+    'take node': async (g) => {
+      if (g.has('node')) return false;
+      await g.say(g.flag('bridge_fixed') ? "The new node is load-bearing now. Pull it out and you'd be standing on a NullPointerException." : "Prying a node out of the bridge you're standing on would only make a second gap. You need a spare one.");
+    },
     // ---------------------------------------------------------------- deaths
     'jump ?,climb ?,enter|go void|gap,swim ?,fly ?': async (g, c) => {
       if (c.verb === 'fly') return void (await g.say("You flap your arms. In here, you're made of data, which is lighter than air, but not by much."));
@@ -510,12 +525,22 @@ export const bridge: RoomDef = {
         return fallToDeath(g, 'jump');
       }
       if (c.verb === 'climb') return void (await g.say('Climb down? To where? There is no bottom. There is no down. There is only further.'));
+      if (c.verb === 'jump' && !c.noun && !c.prep && c.verbWord === 'jump')
+        return void (await g.say('You hop on the spot. The whole bridge bounces like a rope bridge in a cartoon, and CAFE\'s dangling pointer swings out over the NULL. You decide that one jump was plenty. Any more, and you might go somewhere you can\'t come back from.'));
       return fallToDeath(g, 'jump');
     },
     'go down': async (g) => fallToDeath(g, 'jump'),
-    'go bridge|arrows|newnode,walk bridge': async (g) => {
+    'go west,go bridge|arrows|newnode|castle,walk bridge': async (g, c) => {
       // "cross the bridge": head for whichever end is farther away
-      const west = g.player.x > 160;
+      const west = c.noun === 'west' || c.noun === 'castle' || g.player.x > 160;
+      if (c.noun === 'west' && g.flag('bridge_fixed')) return false;
+      if (west && !g.flag('bridge_fixed') && g.player.x > GAP_X1) {
+        // a typed walk stops at the edge; clicking past it is on you
+        await g.walk(null, GAP_X1 + 7, deckTop(GAP_X1 + 7) + 6);
+        g.player.face('left');
+        await g.say(`You walk west along the bridge until the deck runs out at BEEF. Beyond it: a dotted outline, a glowing NULL, and nothing at all. You stop with your toes over the edge. ${g.has('node') ? 'Good thing you have a spare node in your pocket. It needs to go IN that gap.' : 'Not without a node in that gap.'}`);
+        return;
+      }
       await g.walk(null, west ? 2 : 318, 160);
     },
     // ---------------------------------------------------------------- scenery
@@ -549,5 +574,7 @@ export const bridge: RoomDef = {
       if (c.noun && !['bridge', 'gap', 'arrows', 'null'].includes(c.noun)) return false;
       await fixBridge(g);
     },
+    // shared cyberspace replies (helmet, log out, sleep, jump, sing, dance...)
+    ...CYBER_VERBS,
   },
 };

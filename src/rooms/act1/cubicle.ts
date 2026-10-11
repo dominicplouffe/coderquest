@@ -6,6 +6,7 @@ import { dith } from '../../engine/palette';
 import { officeWindow, carpet, desk, monitor, codeLines, keyboard, mug, plant, partition, fluorescent, ceiling, poster } from '../../art/lib';
 import { award } from '../../content/points';
 import { pickUp, npc } from '../../content/helpers';
+import { act1Raw, readAsLook, rerun } from './natural';
 
 function paint(p: Surface, g: Game) {
   const alert = !!g.flag('intro_alert');
@@ -193,10 +194,11 @@ export const cubicle: RoomDef = {
   blocks: [[146, 124, 26, 12]],
   look: "Your cubicle. Your home away from home, and lately, your home. A desk, a monitor, a chair, a succulent named Kevin, and the ever-present hum of fluorescent lights. Through the far windows, the sun is setting on what was supposed to be a long weekend.",
   hotspots: [
-    { id: 'desk', nouns: ['desk', 'table', 'desktop'], area: [62, 98, 197, 20], at: [120, 126], look: 'Your desk: a battlefield of cables, sticky notes, and a keyboard that has survived four reorganizations. There is a drawer on the right side.' },
+    { id: 'desk', nouns: ['desk', 'table', 'desktop', 'my desk'], area: [62, 98, 197, 20], at: [120, 126], look: 'Your desk: a battlefield of cables, sticky notes, and a keyboard that has survived four reorganizations. There is a drawer on the right side.' },
+    { id: 'papers', nouns: ['papers', 'paper', 'paperwork', 'documents', 'printouts'], area: [111, 93, 16, 5], at: [120, 126], look: 'A stack of printouts: last sprint\'s retro notes. Action item one: "Never deploy on a Friday." Action item two: "See action item one."' },
     {
       id: 'computer',
-      nouns: ['computer', 'monitor', 'screen', 'pc', 'display', 'terminal', 'workstation'],
+      nouns: ['computer', 'monitor', 'screen', 'pc', 'display', 'terminal', 'workstation', 'messages', 'chat', 'chat messages', 'red screen', 'core panic'],
       area: [138, 74, 42, 24],
       at: [150, 124],
       look: (g) =>
@@ -209,12 +211,13 @@ export const cubicle: RoomDef = {
     { id: 'mug', nouns: ['mug', 'cup', 'coffee mug', 'coffee cup'], area: [188, 91, 9, 8], at: [190, 124], when: (g) => !g.flag('mug_taken'), look: "Your favorite mug: WORLD'S OKAYEST PROGRAMMER. It's empty. Tragic." },
     { id: 'drawer', nouns: ['drawer', 'drawers', 'desk drawer', 'pedestal'], area: [210, 105, 34, 15], at: [226, 128], look: (g) => (g.flag('drawer_open') ? (g.flag('duck_taken') ? 'Inside the open drawer: three dead pens and a granola bar from 2019.' : 'Inside the open drawer: your trusty rubber duck, three dead pens, and a granola bar from 2019.') : 'A desk drawer. It contains the essentials of your professional life.') },
     { id: 'duck', nouns: ['duck', 'rubber duck', 'ducky'], area: [224, 110, 10, 6], at: [226, 128], when: (g) => !!g.flag('drawer_open') && !g.flag('duck_taken'), look: 'Your rubber duck. It has listened patiently to every bug you have ever explained out loud.' },
-    { id: 'granola', nouns: ['granola', 'granola bar', 'bar', 'pens', 'pen'], area: [233, 111, 8, 5], at: [226, 128], when: (g) => !!g.flag('drawer_open'), look: 'A granola bar that expired in 2019. It may have achieved sentience. Best let it be.' },
+    { id: 'granola', nouns: ['granola', 'granola bar', 'bar'], area: [233, 111, 8, 5], at: [226, 128], when: (g) => !!g.flag('drawer_open'), look: 'A granola bar that expired in 2019. It may have achieved sentience. Best let it be.' },
+    { id: 'pens', nouns: ['pens', 'pen', 'dead pens', 'three pens'], area: [215, 112, 9, 5], at: [226, 128], when: (g) => !!g.flag('drawer_open'), look: 'Three dead pens. You keep them for sentimental reasons, and because throwing them away would mean admitting they are dead.' },
     { id: 'photo', nouns: ['photo', 'picture', 'frame', 'photograph', 'beach photo'], area: [95, 91, 12, 10], at: [100, 124], look: 'A framed photo of you at the beach: sunburned, smiling, and blissfully unaware of the Monolith.' },
     { id: 'plant', nouns: ['plant', 'kevin', 'succulent', 'pot'], area: [194, 86, 16, 13], at: [202, 124], look: 'Kevin, your succulent. Kevin is the only thing in this office that thrives on neglect.' },
     { id: 'lamp', nouns: ['lamp', 'desk lamp'], area: [74, 82, 14, 16], at: [84, 124], look: 'A desk lamp, angled to produce maximum glare on your screen.' },
     { id: 'poster', nouns: ['poster', 'kitten', 'cat', 'cork board', 'corkboard', 'board'], area: [70, 86, 26, 16], at: [84, 124], look: 'A tiny poster of a kitten clinging to a branch: HANG IN THERE. Someone has added "(production)" in red pen. It was you.' },
-    { id: 'notes', nouns: ['sticky notes', 'notes', 'bezel', 'post its'], area: [134, 75, 50, 9], at: [150, 124], look: 'Sticky notes cover your monitor bezel: "TODO: fix everything", "NEVER deploy on Fridays", and "Water Kevin".' },
+    { id: 'notes', nouns: ['sticky notes', 'notes', 'bezel', 'post its', 'post it notes', 'postits', 'postit notes', 'monitor notes'], area: [134, 75, 50, 9], at: [150, 124], look: 'Sticky notes cover your monitor bezel: "TODO: fix everything", "NEVER deploy on Fridays", and "Water Kevin".' },
     { id: 'calendar', nouns: ['calendar', 'date'], area: [231, 85, 16, 15], at: [238, 128], look: "Your calendar. Today is Friday. Circled in red: 'LONG WEEKEND!!!' The red circle is starting to feel ironic." },
     { id: 'hook', nouns: ['hook', 'coat hook', 'peg'], area: [40, 84, 10, 6], at: [62, 140], look: (g) => (g.flag('badge_taken') ? 'An empty coat hook.' : 'A coat hook on the cubicle wall. Your ID badge is hanging from it on its lanyard.') },
     { id: 'badge', nouns: ['badge', 'id badge', 'id', 'lanyard', 'id card'], area: [40, 87, 11, 16], at: [62, 140], when: (g) => !g.flag('badge_taken'), look: 'Your employee ID badge, hanging on its lanyard. It opens most doors on this floor, assuming the building still believes in you.' },
@@ -224,6 +227,12 @@ export const cubicle: RoomDef = {
     { id: 'partition', nouns: ['partition', 'partitions', 'wall', 'walls', 'cubicle', 'cubicle wall', 'fabric', 'panel'], area: [28, 68, 264, 14], look: 'Gray-blue fabric walls, upholstered in the precise color of corporate resignation.' },
   ],
   exits: [{ area: [314, 152, 6, 38], to: 'office', at: [36, 176, 'right'], dir: 'east|south|out' }],
+  nouns: {
+    light: ['light', 'lights', 'lighting', 'fluorescent', 'fluorescents', 'fluorescent lights', 'fluorescent light', 'ceiling lights', 'overhead lights', 'tubes'],
+    cables: ['cables', 'cable', 'wires', 'wire', 'tangle', 'sock', 'lost sock'],
+    aisle: ['aisle', 'runner', 'way out', 'exit'],
+  },
+  raw: (g, text) => act1Raw(g, text),
   verbs: {
     // drawer
     'open drawer,pull drawer': async (g) => {
@@ -247,6 +256,7 @@ export const cubicle: RoomDef = {
       await g.say(g.flag('duck_taken') ? 'Three dead pens and a granola bar from 2019. Nothing you need.' : 'Your rubber duck, three dead pens, and a granola bar from 2019.');
     },
     'take duck': async (g) => {
+      if (g.has('duck') || g.flag('duck_taken')) return false;
       if (!g.flag('drawer_open')) return void (await g.say("You don't see a duck. Your duck lives in your desk drawer, which is closed."));
       await g.approach('drawer');
       g.set('duck_taken');
@@ -254,9 +264,15 @@ export const cubicle: RoomDef = {
       await pickUp(g, 'duck', "You take your rubber duck. Every great debugging session starts with explaining the problem to a duck. If you ever get stuck, TALK TO DUCK.");
       g.redraw();
     },
-    'take granola,eat granola': 'The granola bar expired in 2019. It has developed a personality. Leave it be.',
+    'take granola|pens,eat granola,look granola|pens': async (g, c) => {
+      if (!g.flag('drawer_open')) return void (await g.say(c.verb === 'look' ? "Your desk drawer is closed. Whatever's in there is keeping to itself." : "Your desk drawer is closed. OPEN DRAWER first. Not that anything in there is edible."));
+      if (c.verb === 'look') return false;
+      if (c.noun === 'pens') return void (await g.say('Three dead pens. You leave them to rest in peace. They gave everything they had to sprint planning.'));
+      await g.say('The granola bar expired in 2019. It has developed a personality. Leave it be.');
+    },
     // mug
     'take mug': async (g) => {
+      if (g.flag('mug_taken')) return false;
       await g.approach('mug');
       g.set('mug_taken');
       award(g, 'take_mug');
@@ -294,13 +310,17 @@ export const cubicle: RoomDef = {
       }
       return false;
     },
-    'take keyboard': "You'd rather not. Your muscle memory is calibrated to that keyboard. Besides, it's attached to a computer that can't reach anything anymore.",
+    'take keyboard': async (g) => {
+      if (g.has('keyboard')) return false; // Nicholas's RGB keyboard, already in hand
+      if (!g.flag('note_found')) return void (await rerun(g, 'look under keyboard'));
+      await g.say("You'd rather not. Your muscle memory is calibrated to that keyboard. Besides, it's attached to a computer that can't reach anything anymore.");
+    },
     'take computer,take monitor': 'It is screwed to the desk. Ever since the Great Monitor Heist of 2019.',
     'take photo': 'You leave it where it is. Beach-you is your emotional support during on-call shifts.',
     'take plant': 'Kevin stays. Kevin has seniority.',
     'take poster,take calendar': "It's better where it is.",
     'take notes': 'Those sticky notes are load-bearing. Remove one and the whole monitor might fall.',
-    'type|use|login computer,turnon computer,type': async (g) => {
+    'type|use|login computer,turnon computer,type,login': async (g) => {
       await g.approach('computer');
       await g.pose(null, 'reach', 500);
       g.sfx('error');
@@ -308,9 +328,37 @@ export const cubicle: RoomDef = {
     },
     'turnoff|reboot computer': "Turning your computer off and on won't turn production back on. You've thought about it, though.",
     'sit chair,sit': "You sink into your chair. It squeaks its usual complaint. Then you remember production is down and stand back up. No rest for the senior engineer.",
-    'water plant,touch plant': "You don't have any water. Kevin will be fine. Kevin is always fine.",
+    'touch|hug plant': 'You give Kevin a gentle pat. He is spiky in the way only succulents and senior engineers can be.',
+    'talk plant,ask|tell plant ?': "You tell Kevin about the outage. Kevin takes it in stride, the way only a succulent can. Good listener. Terrible debugger. That's what the duck is for.",
+    'search desk': async (g) =>
+      g.say(
+        `Cables, sticky notes, a keyboard, Kevin, a photo of beach-you. ${g.flag('drawer_open') ? 'The drawer on the right is open.' : 'There is a drawer on the right side.'}${g.flag('note_found') ? '' : ' And is that something yellow peeking out from under the keyboard?'}`,
+      ),
+    'go|enter|exit cubicles|aisle': async (g) => {
+      await g.walk(null, 316, 170);
+      if (g.room?.id === 'cubicle') g.goto('office', [36, 176, 'right']);
+    },
     'turnon|turnoff|use lamp': 'You click the lamp. It flickers, considers its options, and stays exactly as it was.',
     'look/through window': 'Over the partitions, through the far windows, the sun sets over the city. Everyone else is heading home for the weekend.',
+    'look light': (g) =>
+      g.say(
+        g.flag('intro_alert')
+          ? 'The fluorescent lights hum overhead. Since the Monolith went down, half of them are out and the other half are flickering in sympathy.'
+          : 'Fluorescent lights, humming the song of their people.',
+      ),
+    'turnon|turnoff|fix|reboot light,use light': 'The lights are wired into the building management system, which runs on, you guessed it, the Monolith. The desk lamp is the only light you control, and it has opinions.',
+    'look cables,look/under desk,search cables': 'Under your desk: a tangle of cables, a lost sock, and the shame of a thousand dropped snacks. One cable connects to nothing at all. You are afraid to unplug it.',
+    'take|pull|unplug cables': "You've learned the hard way never to pull a mystery cable. Last time, the printer on the fourth floor caught fire.",
+    'look aisle': 'The aisle runs off to the right, out to the open office.',
+    'look|talk|search|comfort|tap aidan,ask|tell aidan ?': async (g) => {
+      if (g.actor('aidan')) return false;
+      await g.say(g.flag('aidan_comforted') ? 'Aidan is back at his desk in the open office, writing his postmortem.' : 'Aidan fled up the aisle to the open office to hide under his desk. Forever, he said. Somebody should probably check on him.');
+    },
+    'look|talk|ask|tell|search mike|nicholas|fahim|phil|krishna|denis|adriana,ask|tell mike|nicholas|fahim|phil|krishna|denis|adriana ?': async (g, c) => {
+      if (c.noun && g.actor(c.noun)) return false;
+      await g.say("Nobody here but you, Kevin, and the hum of the fluorescent lights. Everyone else is out in the rest of the building. (WHERE IS someone? will tell you where to look.)");
+    },
+    'read *': readAsLook,
   },
 };
 

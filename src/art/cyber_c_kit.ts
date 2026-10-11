@@ -5,6 +5,8 @@ import { bayerAt } from '../engine/palette';
 import type { Fill } from '../engine/palette';
 import type { Game } from '../engine/game';
 import type { Response } from '../engine/types';
+import { parse } from '../engine/parser';
+import { duckHint } from '../content/hints';
 
 /** Paint a small sprite with the Surface primitives and return it as an Img. */
 export function paintImg(w: number, h: number, ox: number, oy: number, draw: (s: Surface) => void): Img {
@@ -295,7 +297,30 @@ export const CYBER_VERBS: Record<string, Response> = {
   'think': "You think. It feels like it uses a lot of CPU in here.",
   'hack ?': "You're not hacking the Monolith. You're debugging it. From the inside. With your face.",
   'sudo ?': 'Dominic is not in the sudoers file. This incident will be reported.',
+  // in here the duck talks back: USE DUCK is as good as TALK TO DUCK
+  'use duck': async (g) => {
+    if (!g.has('duck')) return false;
+    await duckHint(g);
+  },
 };
+
+/** Run a rewritten command through the normal dispatch (for synonyms the parser doesn't know). */
+export async function redo(g: Game, text: string): Promise<true> {
+  const c = parse(text, g.localNouns);
+  g.resolveItemNouns(c);
+  if (!(await g.dispatch(c))) await g.hooks.fallback(g, c);
+  return true;
+}
+
+/** Free-text synonyms shared by every Act II room (call from a room's raw hook). */
+export async function cyberRaw(g: Game, text: string): Promise<boolean> {
+  const t = text.trim().toLowerCase().replace(/['’]/g, '');
+  // "clip on my badge", "pin the badge to my hoodie"
+  if (/^(clip|pin|fasten|attach|hang)( on)? (my |the |your )?(id |employee )?badge\b/.test(t) && g.has('badge')) return redo(g, 'wear badge');
+  // "hold up my badge", "wave the badge at the robot"
+  if (/^(hold up|hold out|wave) (my |the |your )?(id |employee )?badge\b/.test(t) && g.has('badge')) return redo(g, g.room?.id === 'heap' ? 'show badge' : 'look at badge');
+  return false;
+}
 
 /** Small helper: is the Act II rubber duck available to chime in? */
 export function hasDuck(g: Game) {

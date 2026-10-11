@@ -8,6 +8,7 @@ import { Surface } from '../../engine/raster';
 import { DARKER } from '../../engine/palette';
 import { award } from '../../content/points';
 import { blockWall, fireDoor, bigStencil, cardboardBox, pipeV, pipeH, tubeOn } from '../../art/basement_props';
+import { act1Raw, readAsLook } from './natural';
 
 // ---- geometry. Feet centerlines of the four landings; flights run between XA and XB.
 const D = 6; // half-depth of a tread band (feet stand anywhere in c-D..c+D)
@@ -449,6 +450,7 @@ export const stairwell: RoomDef = {
     { area: [262, Y3 - D - 2, 28, 5], to: 'basement', at: [22, 160, 'right'], dir: 'down|south|east' },
   ],
   zones: FALL_ZONES.map((area) => ({ area, when: (g: Game) => !lit(g), enter: fallInDark })),
+  raw: (g, text) => act1Raw(g, text),
   nouns: {
     reader: ['reader', 'card reader', 'badge reader', 'keycard reader', 'scanner'],
     lightswitch: ['light switch', 'switch', 'lightswitch', 'switches'],
@@ -457,6 +459,9 @@ export const stairwell: RoomDef = {
   },
   verbs: {
     'look ?,read ?,search ?': darkLook,
+    'look down': 'Three flights of bare concrete zig-zag down into the dark. At the very bottom, a sliver of flickering light leaks under the basement door.',
+    'look up': 'Above you, the underside of the next flight, a spider, and a lot of very old dust. The only way that matters tonight is down.',
+    'read *': readAsLook,
     // the dramatic version of TURN ON KEYBOARD (items.ts defers to us in here)
     'turnon|use keyboard,push * keyboard': async (g) => {
       if (!g.has('keyboard') || lit(g)) return false;

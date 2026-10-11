@@ -1289,7 +1289,7 @@ export class Game {
         return true;
       }
     }
-    if (c.verb === 'look' && !c.noun && r.look) {
+    if (c.verb === 'look' && !c.noun && !c.unknown && r.look) {
       if (typeof r.look === 'string') await this.say(r.look);
       else {
         const out = await r.look(this);

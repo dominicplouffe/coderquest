@@ -13,6 +13,7 @@ import { X } from '../../engine/palette-ext';
 import { award } from '../../content/points';
 import { convo } from '../../content/helpers';
 import { HALL_ARRIVE } from './hallway';
+import { act1Raw, readAsLook, rerun, topicOf, topicLine, type Topics } from './natural';
 
 const SEAM = 102;
 const LX = 30;
@@ -232,6 +233,24 @@ const FLAVOR = [
   "Fun fact: the Monolith's uptime counter rolled over twice. It was at, like, nine thousand days. Was. Past tense.",
 ];
 
+const FAHIM_TOPICS: Topics = [
+  [/adriana|architect/, "Adriana went down to the basement three hours ago, before the crash. Her badge status is still green. She's not answering her phone. Then again, nobody's phone works. It's probably fine. It's probably fine."],
+  [/krishna|helmet|ndi|lab|brain/, "Krishna's building a brain-computer interface in the R&D lab. For debugging. From the INSIDE. I said that's insane. He said 'thank you.' Badge reader on the lab door; your badge should work."],
+  [/denis|dennis|greybeard|graybeard|sysadmin/, "Denis wrote the Monolith's original code. In 1987. He's been its sysadmin ever since. I think he's the only person alive who understands it. Also possibly the only person alive who's met it."],
+  [/phil|ceo|boss/, "Phil loves process. Give him paperwork and he'll give you anything. Except the putter."],
+  [/aidan|intern/, "Aidan? Poor kid. The runbook told him to restart the Monolith. That runbook was written in 1999. I've filed a ticket to update it. Ticket number one, actually."],
+  [/mike|sales/, "Mike sold a client 'Quantum Sync' this morning. I don't know what it is. Mike doesn't know what it is. The client is VERY excited."],
+  [/nicholas|nick|div|css/, 'Nicholas has been trying to center a div since Tuesday. His keyboards have keyboards.'],
+  [/rule|friday/, "Rule Number One. Never deploy on a Friday. It's the only rule I've ever been able to enforce. Tonight it enforced itself."],
+  [/report|incident|paperwork|sev/, (g) => (g.flag('phil_gave_keycard') ? 'Phil laminated it, I assume. He laminates everything I write. I have a fan.' : g.has('report') ? "Take that incident report to Phil. He'll laminate it, then he'll give you what you need. In that order." : "Phil needs the incident report. Did you lose it? Please tell me you didn't lose it.")],
+  [/key ?card|stair|lockdown|door|clearance|basement|elevator/, (g) => (g.flag('stairs_open') ? "You're through the stairwell door? Nice. Bring a light. The stairwell lights are on the Monolith too." : g.flag('phil_gave_keycard') ? "Phil's keycard should open the stairwell. It's the red fire door at the end of the hall." : 'The building is in lockdown, so the stairwell needs CEO clearance: Phil\'s master keycard. Phil will want paperwork. Phil always wants paperwork.')],
+  [/light|dark|flashlight|torch|glow/, "The stairwell lights run on the Monolith too, so it's pitch black in there. Bring something that glows. Or a lot of courage. Glowing is better."],
+  [/monolith|mainframe|outage|production|prod|down|panic|core|status|dashboard|error/, 'Core panic, every service down, not answering on any port. I tried SSH, telnet, serial-over-LAN, and yelling. Somebody has to go down there in person.'],
+  [/coffee|caffeine|mug|refill/, "That coffee saved my life. Possibly my career. I'm going to need about nine more, but I'll get them myself. Eventually."],
+  [/pager|on ?call|sleep|tired/, "Thirty-six hours on call. My pager has a pager. Don't worry about me. Worry about the Monolith."],
+  [/y2k|date|bug|millennium/, "A date bug? Could be. Adriana was chasing one this afternoon. Funny how everything old comes back eventually. Mostly at 3 AM."],
+];
+
 function progressLine(g: Game): string {
   if (!g.flag('phil_gave_keycard')) return g.has('report') ? "Take that incident report to Phil. He'll laminate it, then he'll give you what you need. In that order." : "Phil needs the incident report. Did you lose it? Please tell me you didn't lose it.";
   if (!g.flag('helmet_given')) return "If you're going inside that thing, you'll want Krishna's helmet. The R&D lab is down the hall, past the elevators. Badge reader by the door.";
@@ -260,7 +279,7 @@ export const noc: RoomDef = {
   hotspots: [
     {
       id: 'videowall',
-      nouns: ['dashboards', 'dashboard', 'video wall', 'screens', 'monitors', 'wall of monitors', 'graphs', 'graph', 'alerts', 'red screens', 'big screens', 'charts'],
+      nouns: ['dashboards', 'dashboard', 'video wall', 'screens', 'monitors', 'wall of monitors', 'graphs', 'graph', 'alerts', 'red screens', 'big screens', 'charts', 'map', 'world map', 'data center', 'error', '503'],
       area: [54, 22, 214, 64],
       at: [160, 168],
       look: 'A wall of twelve dashboards. Request rate: zero. Error rate: one hundred percent. Latency: "yes." One graph is just a red line going straight down off the bottom of the screen and continuing, presumably, into the earth\'s core. A world map shows every data center as a little red dot. There is one data center. It is in the basement.',
@@ -281,7 +300,7 @@ export const noc: RoomDef = {
     },
     {
       id: 'console',
-      nouns: ['console', 'desk', 'noc console', 'fahims monitor', 'fahims terminal', 'operator monitors', 'cursor'],
+      nouns: ['console', 'desk', 'noc console', 'fahims monitor', 'fahims terminal', 'operator monitors', 'cursor', 'keyboards', 'drawers', 'drawer', 'fahims keyboard', 'fahims screen'],
       area: [36, 100, 250, 40],
       at: [196, 148],
       look: (g) =>
@@ -401,7 +420,19 @@ export const noc: RoomDef = {
       s.line(164, 6, 180, 9, 4);
     }
   },
-  nouns: { chair: ['chair', 'chairs', 'fahims chair'], beacon: ['beacon', 'alarm light', 'red light', 'siren'], ...BASE_NOUNS, ...itemNouns(['coffee', 'mug', 'report', 'candy']), ...COMPUTER_NOUNS },
+  nouns: {
+    chair: ['chair', 'chairs', 'fahims chair'],
+    beacon: ['beacon', 'alarm light', 'red light', 'siren'],
+    ...BASE_NOUNS,
+    ...itemNouns(['coffee', 'mug', 'report', 'candy']),
+    ...COMPUTER_NOUNS,
+    pager: ['pager', 'pagers', 'beeper', 'fahims pager'],
+    fahim: ['fahim', 'guy', 'man', 'dude', 'zombie', 'person', 'someone', 'somebody', 'engineer', 'sre', 'on call engineer'],
+    printer: ['printer', 'label printer', 'thermal printer'],
+    noccables: ['cables', 'cable', 'wires'],
+    vent: ['vent', 'vents', 'floor vent', 'grate', 'grille'],
+  },
+  raw: (g, text) => act1Raw(g, text),
   verbs: {
     'look fahim': async (g) =>
       g.say(
@@ -409,25 +440,19 @@ export const noc: RoomDef = {
           ? 'Fahim, SRE, fully caffeinated: beard, dark hoodie, eyes like lasers. He is typing at a speed that should not be physically possible, and muttering about TCP retransmits.'
           : 'Fahim, the on-call SRE: beard, dark hoodie, and the thousand-yard stare of a man who has been awake for thirty-six hours. His eyelids are at half-mast. A thin line of drool glistens in the dashboard light. He is mumbling something. It sounds like "coffee."',
       ),
+    'help fahim': async (g) => {
+      if (g.flag('fahim_awake')) return void (await rerun(g, 'talk to fahim'));
+      await g.say("The best way to help Fahim right now is coffee. Real coffee. Thirty-six hours on call does things to a person.");
+    },
     'talk fahim,ask fahim ?,tell fahim ?,say fahim,hello fahim': async (g, c) => {
       await g.approach([226, 160]);
       g.player.faceToward(FAHIM_SLUMP[0], FAHIM_SLUMP[1]);
       if (!g.flag('fahim_awake')) return void (await g.talk('fahim', cycle(g, 'fahim_z_i', ZOMBIE)));
       const f = g.actor('fahim');
-      const topic = c.noun2 ?? '';
-      const topics: Record<string, string> = {
-        adriana: "Adriana went down to the basement three hours ago, before the crash. Her badge status is still green. She's not answering her phone. Then again, nobody's phone works. It's probably fine. It's probably fine.",
-        krishna: "Krishna's building a brain-computer interface in the R&D lab. For debugging. From the INSIDE. I said that's insane. He said 'thank you.'",
-        denis: "Denis wrote the Monolith's original code. In 1987. He's been its sysadmin ever since. I think he's the only person alive who understands it. Also possibly the only person alive who's met it.",
-        phil: "Phil loves process. Give him paperwork and he'll give you anything. Except the putter.",
-        aidan: "Aidan? Poor kid. The runbook told him to restart the Monolith. That runbook was written in 1999. I've filed a ticket to update it. Ticket number one, actually.",
-        mike: "Mike sold a client 'Quantum Sync' this morning. I don't know what it is. Mike doesn't know what it is. The client is VERY excited.",
-        nicholas: "Nicholas has been trying to center a div since Tuesday. His keyboards have keyboards.",
-        rule: "Rule Number One. Never deploy on a Friday. It's the only rule I've ever been able to enforce. Tonight it enforced itself.",
-      };
-      if (topic && topics[topic]) {
+      const line = topicLine(g, topicOf(c), FAHIM_TOPICS);
+      if (line) {
         if (f) f.dir = 'down';
-        await g.talk('fahim', topics[topic]);
+        await g.talk('fahim', line);
         if (f) f.dir = 'up';
         return;
       }
@@ -538,5 +563,20 @@ export const noc: RoomDef = {
     'sit,sit *': "There's no free chair. NOC chairs are claimed by on-call engineers, and they defend them like dragons.",
     'take dashboards,take videowall': "Each of those screens weighs as much as you do. Also, Fahim needs them to stare at.",
     'take console': "It's bolted to the raised floor, and so, at this point, is Fahim.",
+    'look keyboard': async (g) => {
+      if (g.has('keyboard')) return false;
+      await g.say((noc.hotspots!.find((h) => h.id === 'console')!.look as (g: Game) => string)(g));
+    },
+    'open|search console,look/in console': 'The console drawers hold spare pager batteries, a dozen dead headsets, and a laminated card that says IN CASE OF EMERGENCY: CALL FAHIM. Fahim is the emergency.',
+    'look pager,listen pager': "Fahim's pager, clipped to his belt. It went off forty times at 4:59 PM and has been sulking ever since. It is somehow still beeping, very quietly, out of habit.",
+    'take|turnoff|attack pager': async (g) => {
+      if (g.flag('fahim_awake')) return void (await g.talk('fahim', "Hands off the pager. It's the only thing in this building that still works on the first try."));
+      await g.say('You reach for the pager. Even unconscious, Fahim\'s hand twitches protectively toward it. Thirty-six hours of on-call reflexes.');
+    },
+    'look printer': (g) => g.say(g.flag('fahim_awake') ? "A little thermal printer under the console, still warm from printing Fahim's incident report." : 'A little thermal printer under the console. It prints incident reports. It has been very busy this week.'),
+    'look noccables': 'Cables run from every monitor into the raised floor, neatly labeled in Fahim\'s handwriting. Even exhausted, Fahim labels his cables.',
+    'look vent': 'Perforated floor tiles, blowing cold air up into the room. The NOC is kept at a crisp 18 degrees, for the servers and for Fahim, who is mostly running on cold air at this point.',
+    'look window': "There are no windows in the NOC. Windows would let in daylight, and daylight would remind everyone what time it is.",
+    'read *': readAsLook,
   },
 };

@@ -12,6 +12,7 @@ import { award } from '../../content/points';
 import { paintDragon, DragonInfo } from '../../art/cyber_d_dragon';
 import { cardPileImg, hash } from '../../art/creatures_d';
 import { tween, haltPlayer } from '../../art/cyber_d_lib';
+import { CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 
 ANIMATE.add('dragon');
 
@@ -453,7 +454,8 @@ export const dragon: RoomDef = {
   music: 'dragon',
   start: [300, 165, 'left'],
   draw: paint,
-  walk: [[150, 114, 190, 114, 190, 109, 218, 109, 218, 114, 319, 114, 319, 189, 98, 189, 112, 178, 150, 170]],
+  // (the dragon is painted at depth 171: keep Dominic off its coils in front, and out from behind its neck)
+  walk: [[160, 114, 190, 114, 190, 109, 218, 109, 218, 114, 319, 114, 319, 189, 150, 189, 150, 173, 160, 173]],
   blocks: (g) => (g.flag('dragon_asleep') ? [[128, 134, 66, 34]] : []),
   look: (g) =>
     g.flag('dragon_asleep')
@@ -472,6 +474,8 @@ export const dragon: RoomDef = {
     horns: ['horn', 'horns'],
     claws: ['claw', 'claws', 'paw', 'paws', 'foot', 'feet', 'leg', 'legs', 'talons'],
     zzz: ['zzz', 'snore', 'snoring', 'zzzz'],
+    // "read it its own documentation": the manual by any other name
+    manual: ['documentation', 'docs', 'its documentation', 'own documentation', 'its own documentation', 'its manual', 'cobol book'],
   },
   hotspots: [
     {
@@ -488,7 +492,7 @@ export const dragon: RoomDef = {
     },
     {
       id: 'banner',
-      nouns: ['banner', 'flag', 'pennant'],
+      nouns: ['banner', 'flag', 'pennant', 'cobol banner', 'green banner', 'sigil', 'cobol sign'],
       area: [290, 16, 15, 38],
       look: 'A green banner hangs from the tower, spelling out C-O-B-O-L in a vertical column, like a proud old house sigil.',
     },
@@ -500,7 +504,7 @@ export const dragon: RoomDef = {
     },
     {
       id: 'gate',
-      nouns: ['gate', 'gateway', 'arch', 'archway', 'entrance', 'portcullis', 'passage'],
+      nouns: ['gate', 'gateway', 'arch', 'archway', 'entrance', 'portcullis', 'passage', 'portal', 'blue light', 'blue glow', 'glow', 'light', 'core', 'castle gate', 'castle door'],
       area: [GATE_X0 - 4, 60, GATE_X1 - GATE_X0 + 8, 54],
       at: [GATE_CX, 122],
       look: (g) =>
@@ -579,6 +583,26 @@ export const dragon: RoomDef = {
   },
   overlay,
   front,
+  raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
+    const t = text.trim().toLowerCase().replace(/['’]/g, '');
+    if ((/^(recite|narrate)\b/.test(t) || /^read( it| the book| the manual| cobol)?( aloud| out loud| out)?( to (it|him|her|the dragon))?$/.test(t)) && g.has('manual')) {
+      await readToDragon(g);
+      return true;
+    }
+    if (/^(sneak|tiptoe|creep|slip|sidle)\b/.test(t)) {
+      if (g.flag('dragon_asleep')) await g.say("You tiptoe. The dragon snores on. You could walk past it banging a drum, probably, but why risk it.");
+      else await g.say("You try to sneak past. The dragon's pupils track you with perfect precision. Legacy systems may be slow, but they never stop watching. You'll need it to stop watching. Permanently, or at least until morning.");
+      return true;
+    }
+    if (/^(bore|lull|sedate|hypnoti[sz]e|tire)\b/.test(t) || /^(make|put|send|get|sing) (the )?(dragon|it|legacy dragon) (to )?(sleep|asleep|nap|snooze|bed)/.test(t)) {
+      if (g.flag('dragon_asleep')) await g.say("It's already asleep. Snoring in uppercase, even.");
+      else if (g.has('manual')) await g.say("You need something dull enough to put a forty-ton legacy system to sleep. You glance down at the 1,200-page COBOL-85 Reference Manual in your hands. Its own documentation. Read aloud. That would do it.");
+      else await g.say("You'd need something truly, deeply boring for that. You don't have anything that dull on you.");
+      return true;
+    }
+    return false;
+  },
   verbs: {
     // ---------------------------------------------------------------- the solution
     'read manual dragon,read manual,read dragon manual,show|give manual dragon,use manual dragon,read ? dragon,read/to manual ?': async (g, c) => {
@@ -587,8 +611,31 @@ export const dragon: RoomDef = {
       await readToDragon(g);
     },
     // ---------------------------------------------------------------- the dragon
+    'read/to dragon,read/to ?': async (g, c) => {
+      if (c.noun && c.noun !== 'dragon' && c.noun !== 'manual') return false;
+      if (!g.has('manual')) return false;
+      await readToDragon(g);
+    },
+    'open manual,use manual': async (g) => {
+      if (!g.has('manual')) return false;
+      if (g.flag('dragon_asleep')) return void (await g.say("You open the manual, read half a sentence about the DATA DIVISION, and feel your own eyelids droop. You close it again. One sleeping legacy system is enough."));
+      await readToDragon(g);
+    },
+    'talk manual': async (g) => {
+      if (g.flag('dragon_asleep')) return void (await g.say('Shh. Let sleeping legacy systems lie.'));
+      await g.say("You don't speak COBOL. Nobody does anymore; the King said as much. But you ARE carrying 1,200 pages of it, written in exactly the dragon's dialect, by the man who built this place.");
+    },
+    'throw|flip manual ?': async (g) => {
+      if (!g.has('manual')) return false;
+      if (g.flag('dragon_asleep')) return void (await g.say("Throwing a book at a sleeping dragon? Let sleeping legacy systems lie."));
+      await g.say("You heft the manual. Throw 1,200 pages at a dragon and it'll just eat them. It isn't the weight of this book that's dangerous. It's the prose.");
+    },
+    'put dragon': async (g) => {
+      if (g.flag('dragon_asleep')) return void (await g.say("It's already asleep. Snoring in uppercase, even."));
+      await g.say(g.has('manual') ? "Put it to sleep? With what, a lullaby? Something duller. Something much, much duller. Something like... 1,200 pages of COBOL reference, read aloud." : "Put it to sleep? You'd need something truly, deeply boring. You don't have anything that dull on you.");
+    },
     'look dragon': async (g) => void (await g.say(LOOK_DRAGON(g))),
-    'talk|ask|tell dragon ?': async (g) => {
+    'talk|ask|tell dragon ?,talk': async (g) => {
       if (g.flag('dragon_asleep'))
         return void (await g.say("The dragon mumbles in its sleep: \"...PERFORM SLEEP UNTIL WS-MORNING... ZZZ... DISPLAY 'FIVE MORE MINUTES'...\"", { title: 'Legacy Dragon' }));
       await g.approach(READ_SPOT);
@@ -607,7 +654,10 @@ export const dragon: RoomDef = {
         glare = 60;
         return void (await g.say("You attempt some COBOL. The dragon listens, then corrects your syntax in a voice like a dot-matrix printer: \"PERIOD MISSING. LINE 1. SEVERITY: FATAL.\""));
       }
-      return false;
+      if (!t.trim()) return false;
+      glare = 60;
+      g.sfx('roar');
+      await g.say("The dragon's eyes narrow at the sound of plain English. \"UNRECOGNIZED VERB,\" it rumbles, smoke curling from its nostrils. \"THIS INSTALLATION ACCEPTS COBOL ONLY.\"", { title: 'Legacy Dragon' });
     },
     'attack|kick|push|pull dragon': async (g) => {
       if (g.flag('dragon_asleep')) return void (await g.say('Let sleeping legacy systems lie. Seriously. Waking up legacy systems that were running fine is how this entire night started.'));
@@ -655,7 +705,12 @@ export const dragon: RoomDef = {
       await g.say('You are not that hungry, and that is somebody\'s payroll.');
     },
     // ---------------------------------------------------------------- the gate
-    'enter|go gate|wall,go north': async (g) => {
+    'search gate|door|wall': async (g, c) => {
+      // "go through the gate" parses as SEARCH (as in "go through the drawers")
+      if (c.verbWord !== 'go through') return false;
+      await g.walk(null, GATE_CX, g.flag('dragon_asleep') ? 111 : 120);
+    },
+    'enter|go gate|wall,go north,enter,go/in|into': async (g) => {
       if (g.flag('dragon_asleep')) {
         await g.walk(null, GATE_CX, 111);
         return;
@@ -675,11 +730,15 @@ export const dragon: RoomDef = {
     'take skeleton|deck|slides': "You leave the consultant's slide deck where it lies. Some roadmaps are best left un-followed.",
     'read skeleton': 'The title slide reads: "MODERNIZATION ROADMAP: REWRITE IN JAVA (Q3 1998)." Slide two is charcoal.',
     'take sign': 'It is staked firmly into the flagstones. Also, it is right.',
+    'read sign': 'HERE BE LEGACY. Hand-painted, a long time ago, by someone who had clearly met the dragon.',
+    'read banner': 'C. O. B. O. L. One letter per row, top to bottom, like a very proud acrostic.',
     'hide': async (g) => {
       if (g.flag('dragon_asleep')) return void (await g.say("You tiptoe. The dragon snores on. You could walk past it banging a drum, probably, but why risk it."));
       await g.say("You try to sneak. The dragon's pupils track you with perfect precision. Legacy systems may be slow, but they never stop watching.");
     },
     'wait': async (g) => void (await g.say(g.flag('dragon_asleep') ? 'You wait. The dragon snores. Somewhere a payroll batch job hums along without it.' : 'You wait. The dragon waits. It has been waiting since 1987. It is much better at this than you are.')),
     'listen': async (g) => void (await g.say(g.flag('dragon_asleep') ? 'Snoring, like a line printer gently printing nothing.' : 'A low rumble, like a mainframe fan bearing that should have been replaced in 1994.')),
+    // shared cyberspace replies (helmet, log out, sleep, jump, sing, dance...)
+    ...CYBER_VERBS,
   },
 };

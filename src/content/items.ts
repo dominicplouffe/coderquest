@@ -52,7 +52,12 @@ export const ITEMS: ItemDef[] = [
       s.plot(10, 16, 8);
     }),
     verbs: {
-      'call|use|turnon phone,call ?': 'You stab at the power button. The screen flashes a tiny red battery icon and dies. You really need to start charging this thing at night.',
+      'call|use|turnon phone,call ?': async (g, c) => {
+        // "ring the doorbell", "call the elevator": that's the room's business, not the phone's
+        if (c.verb === 'call' && c.noun && c.noun !== 'phone' && g.hotspot(c.noun)) return false;
+        await g.say('You stab at the power button. The screen flashes a tiny red battery icon and dies. You really need to start charging this thing at night.');
+      },
+      'read phone,look/at phone messages,search phone': 'The screen stays black. Whatever messages are waiting on there will have to keep waiting. Battery: 0%.',
       'plug phone powerbank,put phone powerbank,use powerbank phone': "You plug your phone into the power bank. 1%... 2%... You don't have time to wait for a full charge. Production is down!",
     },
   },
@@ -95,6 +100,14 @@ export const ITEMS: ItemDef[] = [
     icon: icon((s) => drawMug(s, false)),
     verbs: {
       'drink mug': "It's empty. You lick the rim, briefly considering your life choices.",
+      'fill mug,use mug': async (g) => {
+        if (g.room?.id === 'breakroom') return false;
+        await g.say(
+          g.flag('coffee_rebooted')
+            ? 'Your mug wants coffee, and the only working coffee machine is in the break room, off the elevator lobby.'
+            : "Your mug wants coffee. The coffee machine is in the break room, off the elevator lobby. Last you heard, it thinks it's a teapot.",
+        );
+      },
     },
   },
   {
@@ -165,7 +178,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: 'keyboard',
     name: 'RGB Keyboard',
-    nouns: ['keyboard', 'rgb keyboard', 'mechanical keyboard', 'rainbow warrior', 'spare keyboard', 'rgb', 'lights', 'keeb'],
+    nouns: ['keyboard', 'rgb keyboard', 'mechanical keyboard', 'rainbow warrior', 'spare keyboard', 'rgb', 'keeb', 'wireless keyboard', 'rgb lights', 'keyboard lights'],
     look: (g) => {
       let t = "Nicholas's spare mechanical keyboard, the 'Rainbow Warrior'. It has more LEDs than a Christmas tree and a battery that lasts a month.";
       if (g.flag('keyboard_on')) t += ' It is blazing in every color of the rainbow.';

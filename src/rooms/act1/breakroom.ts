@@ -10,6 +10,7 @@ import { segDigit, shadow, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../a
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 import { HALL_ARRIVE } from './hallway';
+import { act1Raw, readAsLook, rerun, topicOf, topicLine, type Topics } from './natural';
 
 const SEAM = 106;
 const WALL_TOP = 24;
@@ -364,6 +365,18 @@ const MIKE_LINES = [
   "My phone's fine, by the way. I've got this baby. Forty thousand milliamp-hours. I once powered an entire sales retreat off this thing. In Fresno. Don't ask.",
 ];
 
+const MIKE_TOPICS: Topics = [
+  [/candy|break|bar|snack|chocolate|vending|machine|stuck|coil/, "It's stuck on the coil, third row, hanging by one corner. If somebody bought one more thing out of that row, the whole coil would turn and knock mine loose. I just need ONE more quarter."],
+  [/quarter|coin|money|change|cash|dollar/, "I'm tapped out. Four quarters, gone. This machine spits one back out every now and then, but never when I'm looking. It knows, Dom. It KNOWS."],
+  [/power ?bank|battery|charger|mah|brick|phone/, "This? This is my baby, Dom. Forty thousand milliamp-hours. I'm not parting with her on an empty stomach. Ask me again when I've got my BREAK! bar."],
+  [/sticker|shake|tip|rock|tilt|warning|kick/, "Don't. Read the sticker. I read the sticker the hard way. My lower back still remembers 2021."],
+  [/coffee|teapot|smartbrew|tea/, "Coffee? I'm a tea man after six. Which is ironic, given that machine over there thinks it's a teapot. Turn it off and on again or something. That's your department."],
+  [/monolith|outage|production|prod|down|demo|investor/, "An outage? I'll sell it as a feature. 'Planned resilience exercise.' Very forward-thinking. But first: snack."],
+  [/sales|gary|client|quantum|sync|deal|customer/, "I sold Quantum Sync this morning. Don't ask me what it is. Ask me after my BREAK! bar."],
+  [/fridge|sandwich|lunch/, "That sandwich in the fridge is mine. It's labeled. I know who you are, Dom. I know who EVERYONE is."],
+  [/phil|fahim|aidan|nicholas|nick|krishna|denis|adriana/, "Love that guy. Or gal. Love everybody. Can't talk about anybody on an empty stomach, Dom."],
+];
+
 /** For a generic "machine": is the player closer to the vending machine than the SmartBrew? */
 function nearerVending(g: Game) {
   return Math.abs(g.player.x - (VM.x + 10)) < Math.abs(g.player.x - (CM.x + 13));
@@ -569,11 +582,11 @@ export const breakroom: RoomDef = {
     },
     {
       id: 'cmdisplay',
-      nouns: ['coffee display', 'teapot', '418', 'error', 'error message', 'display', 'screen'],
+      nouns: ['coffee display', 'teapot', '418', 'error', 'error message', 'display', 'screen', 'kettle', 'tea pot'],
       area: [CM.x + 3, CM.y + 3, CM.w - 6, 8],
       at: [CM.x + 13, 118],
       look: (g) =>
-        g.flag('coffee_off') ? 'The display is dark.' : g.flag('coffee_rebooted') ? 'READY.' : '"418 I\'M A TEAPOT." An HTTP status code from a 1998 April Fools\' RFC. Somebody at SmartBrew has a sense of humor. You do not, at the moment.',
+        g.flag('coffee_off') ? 'The display is dark.' : g.flag('coffee_rebooted') ? 'The display reads READY, in a calm green. It has made peace with being a coffee machine. Growth.' : '"418 I\'M A TEAPOT." An HTTP status code from a 1998 April Fools\' RFC. Somebody at SmartBrew has a sense of humor. You do not, at the moment.',
     },
     {
       id: 'cord',
@@ -598,7 +611,7 @@ export const breakroom: RoomDef = {
     },
     {
       id: 'sink',
-      nouns: ['sink', 'faucet', 'tap', 'dirty mugs', 'mugs', 'dishes', 'sponge'],
+      nouns: ['sink', 'faucet', 'tap', 'dirty mugs', 'mugs', 'dishes', 'sponge', 'cups', 'dirty cups', 'soaking mugs'],
       area: [68, 77, 36, 15],
       at: [82, 118],
       look: 'A sink full of mugs that people are "letting soak." Some have been soaking since the last reorg. The faucet drips with the patience of a mainframe.',
@@ -677,7 +690,7 @@ export const breakroom: RoomDef = {
     },
     {
       id: 'table',
-      nouns: ['table', 'donuts', 'donut', 'donut box', 'box', 'newspaper', 'chairs', 'chair'],
+      nouns: ['table', 'break room table', 'kitchen table'],
       area: [104, 120, 116, 46],
       at: [160, 172],
       look: 'A break room table, sticky in places that defy explanation. On it: yesterday\'s newspaper and a pink donut box, empty except for a single, lonely sprinkle.',
@@ -709,6 +722,7 @@ export const breakroom: RoomDef = {
     }
   },
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
     if (/\boff\b.*\b(and|then)\b.*\bon\b/i.test(text) && !/vending|fridge|microwave/i.test(text)) {
       await rebootMachine(g);
       return true;
@@ -789,8 +803,13 @@ export const breakroom: RoomDef = {
     ...COMPUTER_NOUNS,
     machine: ['machine', 'machines'],
     vent: ['vent', 'air vent', 'smoke detector', 'detector', 'smoke alarm'],
+    mike: ['mike', 'guy', 'man', 'dude', 'salesman', 'sales guy', 'person', 'someone', 'somebody', 'blond guy', 'suit'],
     towels: ['paper towels', 'paper towel', 'towels', 'towel'],
     water: ['water', 'tap water', 'glass of water'],
+    newspaper: ['newspaper', 'news paper', 'paper', 'news', 'article', 'business section', 'skull'],
+    donut: ['donut', 'donuts', 'doughnut', 'doughnuts', 'donut box', 'pink box', 'box', 'sprinkle', 'sprinkles'],
+    chair: ['chair', 'chairs', 'red chairs', 'seat'],
+    button: ['button', 'buttons', 'selection buttons'],
   },
   verbs: {
     // ---------------- the SmartBrew 3000
@@ -857,6 +876,8 @@ export const breakroom: RoomDef = {
       if (c.noun === 'coffee' && !c.noun2 && g.has('coffee')) return false;
       if (c.noun === 'pot' || c.noun2 === 'pot') return drinkDeath(g);
       if (c.noun === 'coffee' || c.noun === 'coffeemaker') {
+        if (g.flag('coffee_rebooted'))
+          return void (await g.say(g.has('mug') ? 'The SmartBrew is READY. Brew a cup first: FILL MUG. (And somebody in this building needs it more than you do.)' : "The SmartBrew is READY, but you'd need something to drink it from. Your mug is back at your desk."));
         return void (await g.say("The only coffee in here right now is in that ancient pot, and it has been there since before the Monolith's last reboot. The SmartBrew might make you a fresh cup, if it ever stops believing it's a teapot."));
       }
       if (c.noun === 'sink' || c.noun === 'water' || !c.noun) return void (await g.say('You slurp some tap water from your cupped hands. Refreshing, but it is not coffee.'));
@@ -888,7 +909,25 @@ export const breakroom: RoomDef = {
       if (c.verb === 'look' && !c.prep && g.flag('coin_found')) return false;
       await findCoin(g);
     },
-    'buy candy,buy ?,use vending,push button,put|use|give quarter vending|coinreturn|machine|computer|stuckbar,put quarter,use quarter,give quarter mike': async (g, c) => {
+    'push|use button': async (g) => {
+      if (nearerVending(g)) return void (await rerun(g, 'buy candy'));
+      await rerun(g, 'push coffeemaker');
+    },
+    'pour coffee|coffeemaker ?,pour pot mug': async (g, c) => {
+      if (g.has('coffee') || c.noun === 'pot') return false;
+      await brew(g);
+    },
+    'take quarter': async (g) => {
+      if (g.has('quarter')) return false;
+      await g.say(g.flag('coin_found') ? 'You spent your only quarter. Wisely, as it turned out.' : "You don't see any quarters lying around, and Mike is out of change. Then again, vending machines are famous for keeping people's change.");
+    },
+    'open|unlock|search vending': async (g, c) => {
+      if (c.verb === 'search') return false;
+      await approachVending(g);
+      await g.say("The front panel is locked. Only the vending guy has the key, and he comes on Tuesdays. Possibly. Nobody has ever seen him.");
+    },
+    'look button': 'The SmartBrew has one big BREW button. The vending machine has a keypad with a button for every snack. Both machines are having a bad day.',
+    'buy candy,buy ?,use vending,put|use|give quarter vending|coinreturn|machine|computer|stuckbar,put quarter,use quarter,give quarter mike': async (g, c) => {
       if (c.verb === 'buy' && c.noun && !['candy', 'vending', 'stuckbar', 'machine', 'computer'].includes(c.noun)) return false;
       if (c.verb === 'give' && c.noun2 === 'mike') {
         if (!g.has('quarter')) return false;
@@ -921,7 +960,7 @@ export const breakroom: RoomDef = {
           ? "Mike from Sales: blond hair, gray suit, red tie, and the energy of a man on his fourth espresso and zero BREAK! bars. In one hand he clutches an enormous power bank. With the other, he's slapping the vending machine."
           : 'Mike went back to his desk in the open office, a happy man.',
       ),
-    'talk mike,ask mike ?,tell mike ?,say mike,hello mike': async (g, c) => {
+    'talk mike,ask mike ?,tell mike ?,say mike,hello mike,help mike': async (g, c) => {
       if (!g.actor('mike')) return false;
       if (c.noun2 === 'powerbank' && g.flag('br_mike_talked')) return false;
       await g.approach(g.actor('mike')!);
@@ -939,9 +978,12 @@ export const breakroom: RoomDef = {
         ]);
         m.data.busy = false;
         m.dir = 'right';
+        // they asked about something in particular: answer it too
+        const first = topicLine(g, topicOf(c), MIKE_TOPICS);
+        if (first) await mikeSays(g, first);
         return;
       }
-      await mikeSays(g, cycle(g, 'br_mike_i', MIKE_LINES));
+      await mikeSays(g, topicLine(g, topicOf(c), MIKE_TOPICS) ?? cycle(g, 'br_mike_i', MIKE_LINES));
     },
     'look powerbank': async (g) => {
       if (g.has('powerbank')) return false;
@@ -1033,12 +1075,21 @@ export const breakroom: RoomDef = {
       await g.say('Paper plates. Plastic forks. Approximately four hundred sugar packets. A single, dusty bag of decaf that nobody has ever opened. No coffee filters. There are never coffee filters.');
     },
     'take poster': 'IT would never forgive you. That poster has closed more tickets than anyone in the building.',
-    'take|eat donut,search table,open box,look/in box,take table': async (g) => {
+    'take|eat donut,search table|donut,open donut,look/in donut,take table': async (g) => {
       await g.approach('table');
       await g.say('The donut box is empty except for a single sprinkle. You consider it. You leave it for someone who needs it more.');
     },
+    'look donut': 'A pink donut box. Empty, except for a single, lonely sprinkle. Whoever brought donuts this morning was a hero. Whoever ate the last one, less so.',
+    'look chair': 'Four red plastic chairs around the table. One wobbles. Nobody knows which one until they sit in it.',
     'sit,sit table|chair': "You sit for a second. The chair wobbles. The table is sticky. You get up. There's a production outage to fix.",
-    'read table': "Yesterday's newspaper. The business section has a little article: \"MONOLITH SYSTEMS PREPARES FOR BIG INVESTOR DEMO.\" Somebody has drawn a skull on it. You suspect Fahim.",
+    'read table,read|look newspaper': "Yesterday's newspaper. The business section has a little article: \"MONOLITH SYSTEMS PREPARES FOR BIG INVESTOR DEMO.\" Somebody has drawn a skull on it. You suspect Fahim.",
+    'take newspaper': "You leave it. Yesterday's news is the last thing you need. Today's news is bad enough.",
+    'look window,look/through window,open window': "There are no windows in the break room. It's an interior room, which explains a lot about the coffee.",
+    'look candy': async (g) => {
+      if (g.has('candy')) return false;
+      await g.say(g.flag('candy_bought') ? 'The row where the BREAK! bars were stuck is empty now.' : "Mike's BREAK! bar, hanging from the end of its coil by one corner of the wrapper, third row. So close to freedom. A gentle nudge from above would probably knock it loose.");
+    },
+    'read *': readAsLook,
     'look vent': 'An air vent, and a smoke detector that has chirped "low battery" every forty seconds since 2022. Nobody has ever been able to find which one it is. It is that one.',
     'look towels,take towels': 'A roll of paper towels, the brown industrial kind that is somehow both scratchy and non-absorbent.',
     'look light': "The ceiling lights are off; the break room gets by on daylight from the hallway, the microwave's blinking 12:00, and the vending machine's eternal glow.",

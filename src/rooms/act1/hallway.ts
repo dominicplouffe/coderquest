@@ -8,6 +8,7 @@ import { dith } from '../../engine/palette';
 import { skyline, fluorescent, door as libDoor } from '../../art/lib';
 import { ceilingBand, lerpY, quad, exitSign, tallPlant, plaque, BASE_NOUNS, itemNouns } from '../../art/office_props';
 import { award } from '../../content/points';
+import { act1Raw, readAsLook } from './natural';
 
 const SEAM = 108;
 const EX = 300; // end wall corner
@@ -161,13 +162,15 @@ function paint(p: Surface, g: Game) {
     // floor indicator
     p.rect(e.x + 6, DOOR_TOP - 12, e.w - 12, 6, 0);
     p.frame(e.x + 5, DOOR_TOP - 13, e.w - 10, 8, 8);
-    // OUT OF ORDER sign taped to the doors
-    p.rect(e.x + 4, DOOR_TOP + 14, e.w - 8, 12, 15);
-    p.frame(e.x + 4, DOOR_TOP + 14, e.w - 8, 12, 7);
-    p.micro(e.x + 6, DOOR_TOP + 15, 'OUT', 4);
-    p.micro(e.x + 6, DOOR_TOP + 20, 'ORDR', 4);
-    p.plot(e.x + 4, DOOR_TOP + 14, 14);
-    p.plot(e.x + e.w - 5, DOOR_TOP + 14, 14);
+    // OUT OF ORDER sign taped to the doors (three centered lines)
+    p.rect(e.x + 2, DOOR_TOP + 12, e.w - 4, 19, 15);
+    p.frame(e.x + 2, DOOR_TOP + 12, e.w - 4, 19, 7);
+    const cx = e.x + Math.floor(e.w / 2);
+    p.micro(cx - 5, DOOR_TOP + 13, 'OUT', 4);
+    p.micro(cx - 3, DOOR_TOP + 19, 'OF', 4);
+    p.micro(cx - 9, DOOR_TOP + 25, 'ORDER', 4);
+    p.plot(e.x + 2, DOOR_TOP + 12, 14);
+    p.plot(e.x + e.w - 3, DOOR_TOP + 12, 14);
   }
   // call buttons between the elevators
   p.rect(ELEV1.x + ELEV1.w + 1, 78, 6, 12, 0);
@@ -175,12 +178,10 @@ function paint(p: Surface, g: Game) {
   p.rect(ELEV1.x + ELEV1.w + 3, 80, 2, 2, 14);
   p.rect(ELEV1.x + ELEV1.w + 3, 85, 2, 2, 14);
   // the plaque above the elevators
-  p.rect(118, 20, 80, 24, 6);
-  p.rect(119, 21, 78, 22, 14);
-  p.frame(120, 22, 76, 20, 6);
-  p.micro(124, 24, 'MONOLITH SYSTEMS', 6);
-  p.micro(126, 30, 'PROUDLY NEVER', 6);
-  p.micro(122, 36, 'REBOOTED SINCE 1999', 6);
+  p.rect(112, 20, 92, 24, 6);
+  p.rect(113, 21, 90, 22, 14);
+  p.frame(114, 22, 88, 20, 6);
+  for (const [txt, ty] of [['MONOLITH SYSTEMS', 24], ['PROUDLY NEVER', 30], ['REBOOTED SINCE 1999', 36]] as const) p.micro(158 - Math.floor(microWidth(txt) / 2), ty, txt, 6);
 
   // R&D lab door: badge reader
   if (labOpen) {
@@ -455,7 +456,7 @@ export const hallway: RoomDef = {
     {
       id: 'plaque',
       nouns: ['plaque', 'brass plaque', 'motto', 'never rebooted'],
-      area: [116, 18, 84, 28],
+      area: [110, 18, 96, 28],
       at: [158, 118],
       look: '"MONOLITH SYSTEMS - PROUDLY NEVER REBOOTED SINCE 1999."\n\nSomebody has stuck a sticky note to the bottom corner: "...until today. -Aidan (sorry)"',
     },
@@ -651,6 +652,11 @@ export const hallway: RoomDef = {
       };
       await g.say(msgs[d]);
     },
+    'take|climb stairdoor': async (g) => goThrough(g, 'stairdoor'),
+    // "go in" / "enter": through the nearest door
+    'go/in|into,enter': async (g) => goThrough(g, nearestDoor(g)),
+    'go down': async (g) => goThrough(g, 'stairdoor'),
+    'go up': 'Up? The roof is not on the list of places that can fix the Monolith. The way to the Monolith is DOWN: the stairwell, at the far end of the lobby.',
     'go|enter door|labdoor|stairdoor|nocdoor|breakdoor|elevator': async (g, c) => {
       const d = doorFromNoun(g, c.noun);
       if (!d) return false;
@@ -691,8 +697,10 @@ export const hallway: RoomDef = {
       await g.walk(null, 3, 150);
       g.goto('office', [302, 160, 'left']);
     },
+    'read *': readAsLook,
   },
   raw: async (g, text) => {
+    if (await act1Raw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (/^(badge|card|key ?card|swipe) (in|into)\b/.test(t) || t === 'badge in' || t === 'swipe in' || t === 'swipe') {
       return (await useCard(g, { noun: whichCard(g), noun2: null } as unknown as Command)) !== false;

@@ -12,6 +12,7 @@ import { person } from '../../art/cast';
 import { award } from '../../content/points';
 import { heisenbugImg, butterflyImg, drawJarBug, dissolveImg, hash, lift } from '../../art/creatures_d';
 import { tween, haltPlayer } from '../../art/cyber_d_lib';
+import { CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 
 ANIMATE.add('bug');
 
@@ -646,7 +647,7 @@ export const core: RoomDef = {
   hotspots: [
     {
       id: 'wall',
-      nouns: ['wall', 'walls', 'ribs', 'rings', 'chamber', 'cylinder', 'circuits', 'traces'],
+      nouns: ['wall', 'walls', 'ribs', 'rings', 'chamber', 'cylinder', 'circuits', 'traces', 'sky', 'ceiling', 'darkness', 'pulses', 'circuitry', 'light', 'lights'],
       area: [0, 0, 320, 108],
       look: 'The Core is a great cylinder of dark circuitry. Ribs of light curve up into the darkness, rings of light run around it, and tiny pulses chase each other along the traces like thoughts.',
     },
@@ -661,7 +662,7 @@ export const core: RoomDef = {
     },
     {
       id: 'floor',
-      nouns: ['clock', 'clock face', 'numerals', 'face', 'midnight'],
+      nouns: ['clock', 'clock face', 'numerals', 'face', 'midnight', 'roman numerals', 'numbers', 'ix', 'iii', 'vi', 'xii'],
       area: [4, 112, 312, 78],
       look: (g) =>
         g.flag('bug_fixed')
@@ -690,7 +691,7 @@ export const core: RoomDef = {
     },
     {
       id: 'jar',
-      nouns: ['jar', 'test jar', 'unit test', 'unit test jar', 'test', 'glass jar'],
+      nouns: ['jar', 'test jar', 'unit test', 'unit test jar', 'test', 'glass jar', 'trap', 'test trap', 'the trap', 'regression test'],
       area: [CX, 96, 16, 18],
       at: ALTAR_SPOT,
       when: (g) => !!g.flag('jar_placed') && (!g.flag('bug_caught') || !!g.flag('bug_fixed')),
@@ -701,7 +702,7 @@ export const core: RoomDef = {
     },
     {
       id: 'portal',
-      nouns: ['portal', 'ring', 'ring of light', 'exit portal', 'power symbol', 'symbol', 'gateway'],
+      nouns: ['portal', 'ring', 'ring of light', 'exit portal', 'power symbol', 'symbol', 'gateway', 'log out', 'logout', 'log out sign', 'log out portal', 'swirl', 'swirling light', 'ring of light'],
       area: [24, 56, 42, 76],
       at: PORTAL_FLOOR,
       when: (g) => !!g.flag('bug_fixed'),
@@ -734,6 +735,16 @@ export const core: RoomDef = {
   },
   tick,
   overlay,
+  raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
+    const t = text.trim().toLowerCase().replace(/['’]/g, '');
+    // "don't look at it", "stop watching the bug", "avert my eyes"
+    if (/^(dont|do not|stop|quit|never|avoid|try not to|no) (look|looking|watch|watching|observ|star|peek|peeking|glanc)/.test(t) || /^(look|turn) away\b/.test(t) || /^(avert|cover|shut|close) (my |your )?(eyes|gaze)\b/.test(t)) {
+      await closeEyes(g);
+      return true;
+    }
+    return false;
+  },
   verbs: {
     // ---------------------------------------------------------------- the bug
     'look bug': async (g) => {
@@ -742,11 +753,18 @@ export const core: RoomDef = {
       if (b.visible) vanish(g, b);
       await g.say(LOOKS[lookCount++ % LOOKS.length]);
     },
-    'catch|attack|take bug,use jar bug,put jar bug,throw ? bug': async (g, c) => {
+    'catch|attack|take bug,use jar bug,put jar bug,throw|flip ? bug': async (g, c) => {
       const b = bugActor(g);
       if (!b) return false;
       if (c.verb === 'catch' && ['trap', 'contain', 'bottle'].includes(c.verbWord ?? '') && g.flag('jar_placed'))
         return void (await g.say("The trap is already set. The bug isn't going to walk into it while you stand there staring. Heisenbugs only misbehave when nobody is watching."));
+      // the right idea, done the wrong way: a nudge, not a death
+      if ((c.verb === 'catch' && ['trap', 'contain', 'bottle'].includes(c.verbWord ?? '')) || ((c.verb === 'use' || c.verb === 'put') && c.noun === 'jar')) {
+        if (b.visible) vanish(g, b);
+        if (g.flag('jar_placed')) return void (await g.say("The trap is already set. The bug isn't going to walk into it while you stand there staring. Heisenbugs only misbehave when nobody is watching."));
+        if (!g.has('jar')) return void (await g.say("Trap it with what? You'd need a test: something to catch it in, waiting where it feeds."));
+        return void (await g.say("You raise the jar toward the bug. It sees you seeing it, and simply isn't there anymore. You can't chase a Heisenbug into a test. The test has to be waiting where the bug feeds, and nobody can be watching when it walks in."));
+      }
       const how = c.verb === 'attack' ? 'swing at' : c.verb === 'take' ? 'grab for' : c.noun === 'jar' || c.noun2 === 'jar' ? 'swing the jar at' : 'lunge for';
       return catchBug(g, how);
     },
@@ -776,6 +794,10 @@ export const core: RoomDef = {
       await g.say("You wait and watch. The bug waits too, as long as you're watching. Which is, you realize, the whole problem.");
     },
     // ---------------------------------------------------------------- the jar
+    'drop jar': async (g) => {
+      if (!g.has('jar')) return false;
+      await g.say('Not on the floor; too exposed. A test has to run where the bug lives: on the altar, right next to the code it keeps eating.');
+    },
     'put|use|drop jar altar|floor|wall|computer,put jar,use jar': async (g, c) => {
       if (!g.has('jar')) return false;
       if (c.noun2 === 'floor' || c.noun2 === 'wall' || c.noun2 === 'computer') return void (await g.say('Too exposed. A test has to run where the bug lives: on the altar, right next to the code it keeps eating.'));
@@ -792,7 +814,7 @@ export const core: RoomDef = {
       await g.say(g.flag('bug_fixed') ? 'Empty, clean, green. A passing test.' : "Empty, for now. It's a very inviting kind of empty.");
     },
     // ---------------------------------------------------------------- eyes
-    'close_eyes,cover eyes,blink': async (g, c) => {
+    'close_eyes,cover eyes,cover,blink': async (g, c) => {
       if (c.verb === 'blink') return void (await g.say('You blink. For one sixtieth of a second, the buzzing gets very close. Then your eyes are open again, and it is gone. Interesting...'));
       await closeEyes(g);
     },
@@ -822,14 +844,21 @@ export const core: RoomDef = {
       await g.say((hs.look as (g: Game) => string)(g));
     },
     // ---------------------------------------------------------------- logging out
-    'logout,exit,remove helmet,enter|go|use|touch portal,remove helmet ?': async (g, c) => {
-      if (c.verb === 'exit' && c.noun) return false;
+    'logout,exit,remove helmet,enter|go|use|touch|search|jump portal,exit portal,remove helmet ?': async (g, c) => {
+      if (c.verb === 'exit' && c.noun && c.noun !== 'portal') return false;
+      if (c.verb === 'search' && c.verbWord !== 'go through') return false;
       if (c.verb === 'exit' && !g.flag('bug_fixed')) return false;
       if (c.verb === 'remove' && !g.flag('bug_fixed')) return void (await g.say("You reach for the helmet, but your hands are made of pixels in here; there's nothing to grab. And anyway, the job isn't done."));
       await logOut(g);
     },
     // ---------------------------------------------------------------- scenery
     'look hands,push|pull|turn|move|fix hands': 'The clock face has no hands. Time in here is not the problem; the way the code counts it is.',
+    'put|use jar': async (g) => {
+      if (g.has('jar')) return false;
+      if (g.flag('bug_fixed')) return void (await g.say("The jar is already on the altar, glowing green: a regression test, standing guard."));
+      if (g.flag('jar_placed') && !g.flag('bug_caught')) return void (await g.say("The trap is already set on the altar. Now it just has to run, unobserved."));
+      return false;
+    },
     'take computer|altar|wall': "It's all part of the Monolith. Everything in here is load-bearing.",
     'touch|push altar': 'The altar is warm, like a CPU under load. The code above it shivers.',
     'type|hack|debug ?': async (g, c) => {
@@ -837,5 +866,7 @@ export const core: RoomDef = {
       if (g.flag('bug_fixed')) return void (await g.say('Everything checks out. The best debugging session is the one that ends.'));
       await g.say(g.flag('bug_caught') ? "You know the bug. You know the code. What you need now is the fix: Adriana's patch." : "You try to step through the date routine, but every time you put a breakpoint on it, the bug isn't there. Observing it changes it. You'll need a test to catch it for you.");
     },
+    // shared cyberspace replies (helmet, log out, sleep, jump, sing, dance...)
+    ...CYBER_VERBS,
   },
 };

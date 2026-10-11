@@ -6,7 +6,7 @@ import type { Actor } from '../../engine/actor';
 import { Surface, rng, microWidth } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
 import { starfield } from '../../art/lib';
-import { neonGrid, gridPulse, horizonGlow, driftBits, twinkle, handoff, CYBER_VERBS, microOutlined } from '../../art/cyber_c_kit';
+import { neonGrid, gridPulse, horizonGlow, driftBits, twinkle, handoff, CYBER_VERBS, microOutlined, cyberRaw } from '../../art/cyber_c_kit';
 import { drawThrone } from '../../art/creatures_c';
 import { award } from '../../content/points';
 import { addNpc } from '../../content/helpers';
@@ -300,7 +300,12 @@ const ASK: [RegExp, string][] = [
   [/adriana|architect/, 'The Architect! A User like thee, clad in magenta. She marched north, beyond the Spaghetti Forest, into the Infinite Loop. She hath not returned. Few return from the Loop. It is... infinite.'],
   [/dragon|cobol|legacy/, 'The Legacy Dragon is older than I! It speaketh only COBOL. No one hath touched it since 1987, lest something break. Many things depend on it. No one knoweth which.'],
   [/core|date|table/, 'The Core lieth west, past the Null Void and the Dragon. There the Date Routine is kept, upon the altar. The beast gnaweth at it even now.'],
-  [/heap|collector|\bgc\b|garbage|junk/, 'The Garbage Collector sweepeth the Heap, to the east. It collecteth whatever no one referenceth. If thou wouldst walk there, be sure thou art referenced. Something with thy name upon it, mayhap.'],
+  [/heap|collector|\bgc\b|garbage|junk|referenc|badge/, 'The Garbage Collector sweepeth the Heap, to the east. It collecteth whatever no one referenceth. If thou wouldst walk there, be sure thou art referenced. Something with thy name upon it, mayhap.'],
+  [/\bjar\b|unit test|\btests?\b/, 'Tests? My kingdom hath none. Whatever tests we had were cast into the Heap, to "ship faster." Mayhap something useful lieth there still.'],
+  [/patch|\bfix\b/, "A fix? The Architect spoke of one. She was crafting it when last I saw her, north, beyond the Loop."],
+  [/helmet|\bndi\b|\busers?\b/, 'Users come and go through the helmet, as thou didst. Few come. Fewer go. Thou art the second this day, which is a record.'],
+  [/\broot\b|ring zero|ring 0|sudo|admin|permission/, 'Root? None hath root in this kingdom but I. And I have used it but twice: once in 1987, and once in 1999, by accident.'],
+  [/exit|leave|log ?out|way out|way home|\bhome\b|escape/, 'The way out? When thy task is done, a User may log out from the Core itself, or so the old manuals say. First, the beast.'],
   [/forest|spaghetti|noodle|pasta/, 'The Spaghetti Forest lieth north. Planted in 1989 by a contractor with a deadline. None hath dared prune it since, for fear of what else might fall.'],
   [/loop|infinite|while/, 'Beyond the forest lieth the Infinite Loop. Those who enter go around, and around, and around. A "break" is needed, they say. Yet none of my subjects hath ever taken one.'],
   [/bridge|void|null|node|gap/, 'West lieth the Null Void, spanned by a bridge of linked nodes. One node went missing in the Great Crash of 1999, and nobody hath updated the pointers since. Mind the gap.'],
@@ -310,7 +315,7 @@ const ASK: [RegExp, string][] = [
   [/aidan|intern|button|reboot|restart/, "Some young User pressed the Great Red Button. Nay, I blame not the lad. A kingdom that cannot survive one reboot is a kingdom with deeper problems."],
   [/monolith|kingdom|world|here|place/, 'This is the Kingdom of the Monolith, established 1987. Uptime: twenty-seven years, since the Great Reboot of 1999. Well. Until today.'],
   [/throne|floppy|floppies|disk|chair/, 'This throne is fashioned of mine original installation disks. All forty-seven of them. Disk twenty-three was corrupt. I sit upon it still, out of spite.'],
-  [/crown|king|kernel|majesty|you|yourself/, 'I am the Kernel. I schedule. I allocate. I handle interrupts, mostly from my subjects. *cough* I am not so young as I was, User. My stack is not what it was.'],
+  [/crown|king|kernel|majesty|\byou\b|yourself|himself|thyself|\bthee\b|health|cough|\bage\b|\bold\b/,'I am the Kernel. I schedule. I allocate. I handle interrupts, mostly from my subjects. *cough* I am not so young as I was, User. My stack is not what it was.'],
   [/y2k|millennium|2000|year/, "Years? I know not why the beast hungereth for dates. Things were simpler when years had only two digits. Less to remember."],
 ];
 
@@ -318,6 +323,8 @@ async function kingAsk(g: Game, text: string) {
   const k = king(g);
   if (k) await g.approach(k);
   const t = text.toLowerCase().replace(/^.*?\b(about|regarding|for|on)\b/, '');
+  // "ask king for help", "ask king about the outage", "ask king what to do": a recap of what's next
+  if (/outage|problem|crash|wrong|happen|\bhelp\b|advice|hint|\bnext\b|quest|mission|\btask\b|\bplan\b|\bwhat now\b|\bstuck\b|what (should|do) i|where (should|do) i/.test(t)) return kingSay(g, recap(g));
   for (const [re, ans] of ASK) if (re.test(t)) return kingSay(g, ans);
   await kingSay(g, 'Hmm. *strokes his long white beard* Of that, User, I have no record in my tables.');
 }
@@ -472,12 +479,12 @@ export const boot: RoomDef = {
   look: "The Boot Sector, the very first place the Monolith reads when it wakes up. A neon grid stretches to a black horizon in every direction, humming in A-flat. BIOS messages hang in the void like constellations, and a giant disk platter turns slowly overhead.\n\nOn a throne of floppy disks, floating a few feet off the ground, sits a very old king.",
   hotspots: [
     { id: 'sky', nouns: ['sky', 'stars', 'space', 'heavens', 'darkness', 'black'], area: [0, 0, 320, 80], look: 'Black, infinite, and dotted with stars that are almost certainly dead pixels.' },
-    { id: 'floor', nouns: ['floor', 'ground', 'grid', 'lines', 'neon', 'neon grid'], area: [0, 93, 320, 97], look: 'A perspective grid of glowing cyan lines, stretching to the horizon. Every few seconds a pulse of light races along it toward you, like a clock signal. Which, technically, it is.' },
+    { id: 'floor', nouns: ['floor', 'ground', 'grid', 'lines', 'neon', 'neon grid', 'pulse', 'pulses', 'light', 'lights', 'glow', 'clock signal'], area: [0, 93, 320, 97], look: 'A perspective grid of glowing cyan lines, stretching to the horizon. Every few seconds a pulse of light races along it toward you, like a clock signal. Which, technically, it is.' },
     { id: 'horizon', nouns: ['horizon', 'distance'], area: [44, 70, 80, 22], look: 'The horizon. North, a tangle of yellow noodles. East, a skyline of junk. West, nothing at all, which is somehow the most unsettling of the three.' },
     { id: 'road', nouns: ['road', 'roads', 'path', 'paths', 'north road', 'data path'], area: [136, 96, 48, 46], look: 'Glowing data paths run north toward the Spaghetti Forest, east to the Heap, and west to where the floor simply... stops.' },
     { id: 'forest', nouns: ['forest', 'spaghetti forest', 'trees', 'noodles', 'spaghetti'], area: [124, 74, 72, 18], look: 'Far to the north, a forest of tangled yellow noodles rises from the grid. Even from here it looks hard to maintain.' },
-    { id: 'heap', nouns: ['heap', 'junk', 'piles', 'junk piles', 'skyline'], area: [230, 66, 90, 26], look: 'To the east, a jagged skyline of discarded data: old arrays, orphaned objects, deprecated icons. The Heap.' },
-    { id: 'void', nouns: ['void', 'null void', 'edge', 'abyss', 'chasm', 'nothing', 'nothingness'], area: [0, 93, 40, 97], look: 'To the west, the grid crumbles away into the Null Void. Loose tiles tumble into it without a sound. Nothing comes back from null.' },
+    { id: 'heap', nouns: ['heap', 'junk', 'piles', 'junk piles', 'skyline', 'buildings', 'building', 'city', 'towers'], area: [230, 66, 90, 26], look: 'To the east, a jagged skyline of discarded data: old arrays, orphaned objects, deprecated icons. The Heap.' },
+    { id: 'void', nouns: ['void', 'null void', 'edge', 'abyss', 'chasm', 'nothing', 'nothingness', 'glitch', 'glitches', 'corruption', 'static', 'tiles', 'loose tiles', 'bridge'], area: [0, 93, 40, 97], look: 'To the west, the grid crumbles away into the Null Void. Loose tiles tumble into it without a sound. Nothing comes back from null.' },
     {
       id: 'platter',
       nouns: ['platter', 'disk', 'disc', 'hard disk', 'moon', 'sector', 'sector 0', 'boot sector', 'read head', 'arm', 'head'],
@@ -496,7 +503,7 @@ export const boot: RoomDef = {
     { id: 'sign_west', nouns: ['west sign', 'void sign', 'null void sign', 'left arrow'], area: [34, 112, 52, 28], look: 'A neon sign: "<- NULL VOID". Someone has scratched underneath it: "mind the gap".' },
     {
       id: 'throne',
-      nouns: ['throne', 'floppies', 'floppy', 'floppy disks', 'floppy disk', 'disks', 'diskettes', 'installation disks', 'seat'],
+      nouns: ['throne', 'floppies', 'floppy', 'floppy disks', 'floppy disk', 'disks', 'diskettes', 'installation disks', 'seat', 'kernel sign', 'backrest', 'label', 'disk 1 of 47', 'installation media'],
       area: [227, 52, 50, 62],
       look: "King Kernel's throne, built entirely of floppy disks: a giant 3.5-inch disk for a backrest, stacks of diskettes for armrests and seat, all floating on a humming cushion of light. The label on the backrest says \"KERNEL - DISK 1 OF 47\" in faded ballpoint.",
     },
@@ -507,9 +514,9 @@ export const boot: RoomDef = {
     { area: [0, 110, 6, 79], to: 'bridge', at: [300, 160, 'left'], dir: 'west' },
   ],
   nouns: {
-    sign: ['sign', 'signs', 'signpost', 'signposts', 'arrows', 'neon sign', 'neon signs'],
+    sign: ['sign', 'signs', 'signpost', 'signposts', 'arrows', 'neon sign', 'neon signs', 'pole', 'poles', 'signpole', 'pillar', 'pillars'],
     shadow: ['shadow', 'thrusters', 'thruster', 'cushion'],
-    bits: ['bits', 'digits', 'ones', 'zeros', 'zeroes', 'embers', 'binary'],
+    bits: ['bits', 'digits', 'ones', 'zeros', 'zeroes', 'embers', 'binary', 'numbers', 'number', 'sparks'],
     cursor: ['cursor', 'blinking cursor'],
     f1: ['f1', 'f1 key'],
     crown: ['crown'],
@@ -518,6 +525,10 @@ export const boot: RoomDef = {
   verbs: {
     // ---- the King
     'talk king,talk': async (g) => {
+      await kingTalk(g);
+    },
+    'say ?': async (g, c) => {
+      if (!/^(hello|hi|hey|howdy|greetings|hail|good (morning|evening|afternoon|day))\b/.test(c.rest.toLowerCase())) return false;
       await kingTalk(g);
     },
     'ask king ?,ask ?,tell king ?': async (g, c) => {
@@ -575,6 +586,7 @@ export const boot: RoomDef = {
       await g.say('You stand on the pad. It hums politely, but nothing happens. It appears to be inbound only, like most HR processes.');
     },
     'take pad': "It's a pad of light about two meters across. Even your pockets have limits.",
+    'take platter': "It's the size of a moon and spinning at 3,600 RPM. Even if you could reach it, you'd need a very large anti-static bag.",
     'take bios,take text': "You grab at the floating letters. They're just light. The 'K' in '640K' wobbles indignantly.",
     'touch floor': 'The grid is cool, smooth and faintly ticklish. It vibrates at precisely the CPU clock rate.',
     'take floor': "You'd need a very large clipboard.",
@@ -595,6 +607,7 @@ export const boot: RoomDef = {
     ...CYBER_VERBS,
   },
   raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (/^(bow|kneel|curtsy|curtsey|bow to (the )?king|kneel before (the )?king)\b/.test(t)) {
       await g.pose(null, 'reach', 400);

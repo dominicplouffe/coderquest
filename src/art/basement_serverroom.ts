@@ -234,8 +234,8 @@ export function paintServerRoom(p: Surface, o: { connected: boolean; act3: boole
 
   // ---- modern racks, a little embarrassed to be here
   rackLeds = [...serverRack(p, 256, 52, 24, 56, 5), ...serverRack(p, 284, 52, 24, 56, 9)];
-  p.rect(258, 46, 20, 6, 14);
-  p.micro(259, 47, 'CLOUD', 0);
+  p.rect(257, 46, 22, 6, 14);
+  p.micro(258, 47, 'CLOUD', 0);
   p.rect(286, 46, 20, 6, 14);
   p.micro(288, 47, '2009', 0);
   // digital wall clock frame

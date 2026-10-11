@@ -13,6 +13,7 @@ import { award } from '../../content/points';
 import { addNpc } from '../../content/helpers';
 import { THREAD_A, THREAD_B, ThreadPose, threadImg, drawPadlock, drawHourglass, dissolveImg, hash } from '../../art/creatures_d';
 import { neonFloor, tween } from '../../art/cyber_d_lib';
+import { CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 
 ANIMATE.add('threada');
 ANIMATE.add('threadb');
@@ -371,7 +372,8 @@ function paint(p: Surface, g: Game) {
     for (let x = CAGE_X0 - 2; x < CAGE_X1 + 4; x += 10) p.plot(x, 116, 11);
   });
   // back bars (behind Adriana)
-  for (let x = CAGE_X0 + 4; x <= CAGE_X1 - 4; x += 6) p.vline(x, 60, 100, 3);
+  // (once the door is up, the bars seen through the open doorway dim, so it reads as an opening)
+  for (let x = CAGE_X0 + 4; x <= CAGE_X1 - 4; x += 6) p.vline(x, 60, 100, free && x > DOOR_X0 - 2 && x < DOOR_X1 + 1 ? 1 : 3);
   p.hline(CAGE_X0 + 2, CAGE_X1 - 2, 60, 3);
   // front bars, rails & dome (in front of anyone standing inside)
   p.at(CAGE_FRONT, () => {
@@ -715,18 +717,18 @@ export const deadlock: RoomDef = {
   nouns: {
     threada: ['thread a', 'a thread', 'thread 1', 'thread one', 'first thread', 'left thread', 'left robot', 'left guard', 'robot a', 'guard a', 'cyan thread', 'cyan robot'],
     threadb: ['thread b', 'b thread', 'thread 2', 'thread two', 'second thread', 'right thread', 'right robot', 'right guard', 'robot b', 'guard b', 'magenta thread', 'magenta robot', 'pink robot'],
-    threads: ['thread', 'threads', 'robot', 'robots', 'guard', 'guards', 'guard robots', 'both threads', 'both robots', 'spool', 'spools', 'bots'],
+    threads: ['thread', 'threads', 'robot', 'robots', 'guard', 'guards', 'guard robots', 'both threads', 'both robots', 'spool', 'spools', 'bots', 'process', 'processes', 'guard robot', 'thread robots'],
     locks: ['lock', 'locks', 'padlock', 'padlocks', 'lock 1', 'lock 2', 'lock one', 'lock two', 'lock1', 'lock2', 'mutex', 'mutexes'],
     hourglass: ['hourglass', 'hourglasses', 'spinner', 'wait cursor', 'cursor', 'busy cursor'],
     roboteye: ['red eye', 'red eyes', 'visor', 'visors', 'robot eye', 'robot eyes'],
     fork: ['fork', 'forks'],
-    spaghetti: ['spaghetti', 'pasta', 'noodles'],
+    spaghetti: ['spaghetti', 'pasta', 'noodles', 'food', 'meal', 'dinner', 'plates of spaghetti'],
     chair: ['chair', 'chairs'],
   },
   hotspots: [
     {
       id: 'wall',
-      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'back wall', 'steel'],
+      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'back wall', 'steel', 'arch', 'arches', 'pipe', 'pipes', 'mutex co', 'mutex and co', 'mutex & co', 'est 1987', 'makers plate', 'rivets', 'wall'],
       area: [66, 0, 188, 108],
       look: "The back wall of the chamber is one titanic padlock: a steel shackle arching up into the dark, rivets the size of your fist, and a maker's plate reading MUTEX & CO 1987. Its keyhole is big enough to stand in. Somebody did, and put a cage there.",
     },
@@ -745,7 +747,7 @@ export const deadlock: RoomDef = {
     },
     {
       id: 'philsign',
-      nouns: ['sign', 'dining sign', 'plaque', 'reserved sign', 'sconce'],
+      nouns: ['sign', 'dining sign', 'plaque', 'reserved sign', 'sconce', 'lamp', 'bulb', 'lightbulb', 'light bulb', 'candle'],
       area: [4, 20, 56, 40],
       look: 'A sign: DINING PHILOSOPHERS, SINCE 1965. Below it a little sconce flickers, as if it too is waiting for a fork.',
     },
@@ -766,7 +768,7 @@ export const deadlock: RoomDef = {
     },
     {
       id: 'chains',
-      nouns: ['chain', 'chains'],
+      nouns: ['chain', 'chains', 'ceiling', 'sky', 'dark', 'darkness'],
       area: [70, 0, 182, 0, 182, 2, 250, 2, 250, 42, 242, 42, 242, 4, 78, 4, 78, 42, 70, 42],
       look: 'Chains hang from the dark ceiling. Decorative, mostly. Concurrency has a strong aesthetic.',
     },
@@ -840,9 +842,18 @@ export const deadlock: RoomDef = {
   overlay,
   front,
   raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (/^kill\s+-9/.test(t) || /^kill\s+(-\w+\s+)?\d+/.test(t) || t === 'sigkill' || t === 'kill all' || t === 'killall') {
       await g.say("You consider sending SIGKILL. Then you picture it: a thread killed mid-lock, LOCK 1 or 2 never released, the cage locked forever with Adriana inside. You put the signal away. Gently does it.");
+      return true;
+    }
+    if (/^(pick|picklock|lockpick)\b.*\b(lock|locks|padlock|padlocks|cage|door)\b/.test(t)) {
+      await g.say(g.flag('adriana_free') ? 'No need. Everything in here is unlocked now.' : "You don't have any lockpicks. And these locks aren't locked with keys; they're locked with stubbornness. Two threads' worth.");
+      return true;
+    }
+    if (/^(use|give|offer) (the )?(candy|break|break bar|candy bar|chocolate|snack)$/.test(t) && g.has('candy') && !g.flag('adriana_free')) {
+      await giveBreak(g, nearestThread(g));
       return true;
     }
     if (/after you/.test(t) && !g.flag('adriana_free')) {
@@ -855,7 +866,7 @@ export const deadlock: RoomDef = {
   },
   verbs: {
     // ---------------------------------------------------------------- the solution
-    'give|use|throw|put candy threada|threadb|threads': async (g, c) => {
+    'give|use|throw|flip|put candy threada|threadb|threads': async (g, c) => {
       if (!g.has('candy')) return false;
       if (g.flag('adriana_free')) return void (await g.say("The deadlock is already resolved. Besides, you're out of BREAK! bars."));
       await giveBreak(g, whoFromNoun(g, c.noun2));
@@ -987,6 +998,12 @@ export const deadlock: RoomDef = {
       await threadSay(g, w, 'MINE.');
       await g.say(`${tname(w)}'s grip tightens with the quiet intensity of a toddler holding a toy. LOCK ${lockOf(w)} is not going anywhere until it decides to let go.`);
     },
+    'use|put * locks,unlock locks': async (g, c) => {
+      if (c.noun && c.noun !== 'locks' && !g.has(c.noun)) return false;
+      if (c.noun === 'candy') return false;
+      if (g.flag('adriana_free')) return void (await g.say("The padlocks are already open, lying on the floor. Released locks don't need anything from you."));
+      await g.say("The padlocks don't have keyholes, card readers or override switches. They have threads: two very stubborn threads, each hugging its lock like a teddy bear. The locks will open when a thread decides to let go.");
+    },
     'unlock|open cage|door,pull|push door,use * cage|door': async (g) => {
       if (g.flag('adriana_free')) return void (await g.say("It's already open."));
       await g.approach('door');
@@ -1014,8 +1031,9 @@ export const deadlock: RoomDef = {
         return void (await g.say("Adriana, your lead architect, stands in the cage in her magenta blazer, arms folded, tapping one foot. She's been in here three hours and has clearly redesigned the cage twice in her head. Her pixels look a little dimmer than yours: the v1 helmet."));
       await g.say("Adriana, free at last, stretching like someone who has been standing in a birdcage for three hours. She has the look of an architect who has a plan and is about to tell you it.");
     },
-    'talk|ask adriana ?': async (g, c) => {
+    'talk|ask adriana ?,talk': async (g, c) => {
       const ad = adrianaActor(g);
+      if (!ad && !c.noun) return false;
       if (!ad) return void (await g.say("Adriana has logged out. You'll see her in the server room, assuming this all works."));
       if (g.flag('adriana_free')) return adrianaGivesPatch(g);
       await g.approach([160, 128]);
@@ -1068,6 +1086,8 @@ export const deadlock: RoomDef = {
     },
     'search table': 'Five plates of spaghetti from 1965, five forks, and a candle stub that burned out sometime during the Johnson administration. No clues. No second forks.',
     'listen': async (g) => void (await g.say(g.flag('adriana_free') ? 'Quiet, mostly. Somewhere to your left, a happy little munching sound.' : 'The tick of the wait timer. The faint whine of two cooling fans running flat out. Two robots, straining with all their might to do absolutely nothing.')),
+    // shared cyberspace replies (helmet, log out, sleep, jump, sing, dance...)
+    ...CYBER_VERBS,
   },
 };
 

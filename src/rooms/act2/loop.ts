@@ -7,7 +7,7 @@ import type { Dir } from '../../engine/actor';
 import { Surface, rng } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
 import { halo } from '../../art/creatures_c';
-import { twinkle, sevenSeg, sevenSegWidth, commas, microOutlined, microCentered, textOutlined, CYBER_VERBS } from '../../art/cyber_c_kit';
+import { twinkle, sevenSeg, sevenSegWidth, commas, microOutlined, microCentered, textOutlined, CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 import { award } from '../../content/points';
 
 const HZ = 100;
@@ -461,7 +461,7 @@ export const loop: RoomDef = {
           : 'A great arch inscribed in glowing letters: "while (true) {". Between its pillars a force field shimmers. Walk through it and you will simply come around again. The condition is always true. That is rather the point.',
     },
     { id: 'brace', nouns: ['brace', 'closing brace', 'curly brace', 'bracket', 'monument', 'statue'], area: [254, 54, 40, 78], look: 'A giant closing brace "}" stands on the east side of the arena, marking the end of the loop body. You reach the end of the loop, and you go back to the start. That is what the brace means.' },
-    { id: 'pedestal', nouns: ['pedestal', 'wheel', 'loading wheel', 'please wait', 'wait sign', 'spinning wheel', 'loading'], area: [26, 80, 40, 52], look: 'A pedestal marked WAIT...., topped with a spinning "please wait" wheel. It has been spinning since 1987. It will not stop until the loop does.' },
+    { id: 'pedestal', nouns: ['pedestal', 'wheel', 'loading wheel', 'please wait', 'wait sign', 'spinning wheel', 'loading', 'sign', 'wait', 'please wait sign', 'loading sign'], area: [26, 80, 40, 52], look: 'A pedestal marked WAIT...., topped with a spinning "please wait" wheel. It has been spinning since 1987. It will not stop until the loop does.' },
   ],
   exits: [
     { area: [100, 186, 120, 3], to: 'forest', at: [160, 118, 'down'], dir: 'south' },
@@ -473,7 +473,7 @@ export const loop: RoomDef = {
     { area: [316, 124, 4, 65], to: 'loop', at: [304, 160, 'left'], dir: 'east', when: (g) => !!g.flag('loop_broken'), blocked: () => 'Now that the loop is broken, the arena wall on this side is just a wall. The only ways out are north and south.' },
   ],
   nouns: {
-    loop: ['loop', 'infinite loop', 'while loop', 'cycle'],
+    loop: ['loop', 'infinite loop', 'while loop', 'cycle', 'process', 'program', 'processes'],
     cage: ['cage', 'chamber', 'corridor', 'red glow', 'glow', 'deadlock'],
   },
   verbs: {
@@ -488,7 +488,25 @@ export const loop: RoomDef = {
     'escape,escape loop|arch|room': async (g) => {
       await breakLoop(g, 'escape');
     },
-    'exit loop|arch,exit': "You can't just walk out of a loop. You'd come right back around. Loops have to be BROKEN out of.",
+    'exit loop|arch,exit': async (g) => {
+      if (g.flag('loop_broken')) return void (await g.say('No need to escape anymore: the loop is broken. North, past the rubble, lies the red chamber. South is the forest.'));
+      await g.say("You can't just walk out of a loop. You'd come right back around. Loops have to be BROKEN out of.");
+    },
+    'use|give|throw|flip|put|show candy ?': async (g) => {
+      if (!g.has('candy')) return false;
+      if (g.flag('loop_broken')) return void (await g.say("The loop doesn't need a BREAK! anymore. It already got one. Save the bar for somebody who's been stuck even longer."));
+      await g.say('You wave the BREAK! bar at the arch. The force field hums, unimpressed. Right word, wrong data type: a loop doesn\'t want a snack. It wants the keyword itself. Say it like you mean it.');
+    },
+    'attack loop|arch,turnoff loop|arch|counter': async (g) => {
+      if (g.flag('loop_broken')) return void (await g.say('The loop is already broken. There is nothing left to stop.'));
+      await g.say("You can't kill a loop from the inside by hitting it; it would just come around again, slightly bruised. Every programmer knows the one keyword that ends a loop early.");
+    },
+    'search arch|loop|brace': async (g, c) => {
+      // "go through the arch" parses as SEARCH (as in "go through the drawers")
+      if (c.verbWord !== 'go through') return false;
+      if (c.noun === 'brace') return void (await g.say("You can't go through a closing brace. You can only reach it, and start again from the top."));
+      await g.walk(null, 160, 105);
+    },
     'look loop': async (g) => {
       const r = loop.look;
       if (typeof r === 'function') {
@@ -527,6 +545,7 @@ export const loop: RoomDef = {
     ...CYBER_VERBS,
   },
   raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (/^(type |say |shout |yell |enter |press )?["']?break;?["']?!?$/.test(t) || /^break (out( of)?( the)? loop|out|free|the loop|loop)\b/.test(t)) {
       await breakLoop(g, 'break');
@@ -538,6 +557,22 @@ export const loop: RoomDef = {
     }
     if (/^(press |type |hit |send )?(ctrl|control|ctl)[\s+-]*c$|^\^c$/.test(t)) {
       await breakLoop(g, 'ctrlc');
+      return true;
+    }
+    if (/^(stop|halt|end|terminate|interrupt|abort|cancel|kill|exit|quit|leave|get out( of)?)( the)?( infinite)?( this)?( loop| while| arch| program| process| it| this)?[.!]*$/.test(t) && !/^(exit|leave|quit)$/.test(t)) {
+      if (g.flag('loop_broken')) {
+        await g.say('The loop has already stopped. The counter is frozen, the arch is rubble, and the way north is open.');
+        return true;
+      }
+      await g.say(`You ask the loop, politely, to stop. It considers the request... and comes back around to it, every iteration, forever. Loops don't take requests. They take one keyword${g.has('candy') ? ': the same one printed on that candy bar in your pocket.' : ', the one every programmer reaches for to end a loop early.'}`);
+      return true;
+    }
+    if (/^how\b.*\b(out|leave|exit|escape|stop|end)\b/.test(t)) {
+      if (g.flag('loop_broken')) {
+        await g.say('You already broke out. North to the red glow, or south to the forest.');
+        return true;
+      }
+      await g.say("Good question. Walking out just brings you back round. To leave an infinite loop early you need the one keyword every programmer knows. (Or, if you're the old-fashioned type, the key in the top-left corner of a keyboard.)");
       return true;
     }
     if (/^continue;?$/.test(t)) {

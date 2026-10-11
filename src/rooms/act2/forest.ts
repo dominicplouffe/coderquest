@@ -5,7 +5,7 @@ import type { RoomDef } from '../../engine/types';
 import type { Game } from '../../engine/game';
 import { Surface, rng } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
-import { neonGrid, gridPulse, twinkle, handoff, CYBER_VERBS } from '../../art/cyber_c_kit';
+import { neonGrid, gridPulse, twinkle, handoff, CYBER_VERBS, cyberRaw } from '../../art/cyber_c_kit';
 import { noodleTree, tangle, meatball, twirl, noodle } from '../../art/cyber_c_pasta';
 import { award } from '../../content/points';
 
@@ -307,11 +307,11 @@ export const forest: RoomDef = {
   ],
   look: (g) =>
     g.flag('forest_refactored')
-      ? 'The Spaghetti Forest. Noodle trees loop and twirl overhead, meatballs nestle in their crowns, and GOTO signs point in every direction at once.\n\nBut the path north is now clean, straight and well documented, flanked by two neat columns of perfectly parallel noodles. It leads toward a faint magenta glow.'
-      : 'The Spaghetti Forest. Noodle trees loop and twirl overhead, tangled into one another so thoroughly that nobody can tell where one ends and the next begins. Red meatballs nestle in their crowns. GOTO signs point in every direction at once.\n\nTo the north, the path disappears into a dense, impenetrable tangle of spaghetti.',
+      ? 'The Spaghetti Forest. Noodle trees loop and twirl overhead, meatballs nestle in their crowns, and GOTO signs point in every direction at once. Off to the west, a tower of stacked boxes rises above the noodles.\n\nBut the path north is now clean, straight and well documented, flanked by two neat columns of perfectly parallel noodles. It leads toward a faint magenta glow.'
+      : 'The Spaghetti Forest. Noodle trees loop and twirl overhead, tangled into one another so thoroughly that nobody can tell where one ends and the next begins. Red meatballs nestle in their crowns. GOTO signs point in every direction at once. Off to the west, a tower of stacked boxes rises above the noodles.\n\nTo the north, the path disappears into a dense, impenetrable tangle of spaghetti.',
   hotspots: [
     { id: 'canopy', nouns: ['canopy', 'branches', 'vines', 'overhead'], area: [0, 0, 320, 30], look: 'Overhead, strands of spaghetti drape from tree to tree like vines. Nobody knows which tree any of them belongs to. Nobody dares to find out.' },
-    { id: 'tower', nouns: ['tower', 'stack', 'stack tower', 'distant tower', 'stack overflow tower'], area: [60, 0, 22, 100], look: 'Far to the west, through the noodles, a tower of stacked boxes rises into the sky and keeps going. The Stack Overflow Tower.' },
+    { id: 'tower', nouns: ['tower', 'stack', 'stack tower', 'distant tower', 'stack overflow tower', 'boxes', 'tower of boxes', 'frames'], area: [60, 0, 22, 100], look: 'Far to the west, through the noodles, a tower of stacked boxes rises into the sky and keeps going. The Stack Overflow Tower.' },
     {
       id: 'trees',
       nouns: ['trees', 'tree', 'noodle trees', 'noodle tree', 'forest', 'spaghetti', 'noodles', 'noodle', 'pasta', 'strands', 'trunk'],
@@ -326,7 +326,7 @@ export const forest: RoomDef = {
     },
     {
       id: 'path',
-      nouns: ['path', 'north path', 'trail', 'way', 'way north', 'tangle', 'gap', 'mess', 'knot'],
+      nouns: ['path', 'north path', 'trail', 'way', 'way north', 'tangle', 'gap', 'mess', 'knot', 'ball', 'big ball', 'noodle ball', 'spaghetti ball', 'ball of spaghetti', 'ball of noodles', 'tangled ball', 'wall of spaghetti', 'do not touch sign', 'tiny sign', 'little sign', 'it works'],
       area: [124, 54, 72, 76],
       look: (g) =>
         g.flag('forest_refactored')
@@ -356,6 +356,7 @@ export const forest: RoomDef = {
   nouns: {
     sky: ['sky', 'stars'],
     floor: ['floor', 'ground', 'grid'],
+    sauce: ['sauce', 'marinara', 'tomato sauce', 'marinara sauce', 'oregano', 'garlic'],
   },
   exits: [
     { area: [96, 186, 128, 4], to: 'boot', at: [160, 120, 'down'], dir: 'south' },
@@ -395,11 +396,18 @@ export const forest: RoomDef = {
       await g.wait(500);
       return void (await g.die('Somewhere across the kingdom, forty-one unrelated modules that depended on that global variable crash at once. So does the one you are standing in.\n\nNever eat global state.', { title: 'Side Effects' }));
     },
-    'eat trees,eat path,drink sauce': 'You slurp a noodle. It tastes like 1989: undocumented, under-tested, with a hint of global state. Al dente, though. Credit where it\'s due.',
-    'take trees,take path': async (g) => {
+    'eat trees,eat path': 'You slurp a noodle. It tastes like 1989: undocumented, under-tested, with a hint of global state. Al dente, though. Credit where it\'s due.',
+    'take trees,take path,pull trees': async (g) => {
       await g.say('You tug on a noodle. Three trees shake, a signpost spins, and somewhere a meatball falls. Everything here is coupled to everything else. You let go, very gently.');
     },
     'climb trees': 'You try to climb a noodle tree. The noodles are al dente, but not THAT al dente.',
+    'go trees': 'You pick a noodle and follow it. It loops around three trees, doubles back through a fourth, ducks under a GOTO sign and deposits you exactly where you started. Classic spaghetti control flow.',
+    'use fork trees|path|sauce,use fork': async (g) => {
+      if (g.flag('forest_refactored')) return void (await g.say('You twirl a little spaghetti around the giant fork, purely for the aesthetics. The path north stays clean. You feel like a real craftsperson.'));
+      await g.say("You try to twirl the tangle around the giant fork. The whole forest turns with it: three trees, a signpost and a meatball you were not expecting. Forks don't fix spaghetti. A careful refactoring does.");
+    },
+    'look sauce': 'The forest floor glows faintly with marinara at the horizon. The whole place smells of oregano, garlic, and legacy code.',
+    'take|drink|eat sauce': "There's no actual sauce here, only its glow and its smell. This forest is all noodle, no sauce. Which explains a lot.",
     'take fork,pull fork': async (g) => {
       await g.approach('fork');
       await g.pose(null, 'reach', 600);
@@ -426,6 +434,7 @@ export const forest: RoomDef = {
     ...CYBER_VERBS,
   },
   raw: async (g, text) => {
+    if (await cyberRaw(g, text)) return true;
     const t = text.trim().toLowerCase();
     if (/^(goto|go to|follow|jmp|jump to)\s*(line\s*)?10\b/.test(t) || /^goto\b/.test(t)) {
       await gotoTen(g);
