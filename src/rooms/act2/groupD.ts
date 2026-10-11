@@ -1,4 +1,7 @@
 import type { RoomDef } from '../../engine/types';
+import { deadlock } from './deadlock';
+import { bridge } from './bridge';
+import { dragon } from './dragon';
 
-// Rooms in this group are registered here.
-export const ROOMS_D: RoomDef[] = [];
+// Act II, part 2: inside the Monolith (Deadlock, Null Void, Dragon's Lair, Core).
+export const ROOMS_D: RoomDef[] = [deadlock, bridge, dragon];
