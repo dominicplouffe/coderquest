@@ -73,6 +73,8 @@ Just start typing. Press **Enter** to send a command.
 | Help | `F1` |
 | Stuck? | `TALK TO DUCK` |
 
+On a phone or tablet, tap to walk and use the **Type / Items / Menu** buttons.
+
 Tips from 1987: **save often**, look at everything, read everything, and if a sign says not to
 do something, think hard before doing it anyway.
 
