@@ -467,7 +467,7 @@ export const stairwell: RoomDef = {
       if (!g.has('keyboard') || lit(g)) return false;
       await lightUp(g);
     },
-    'turnon|use|push|flip lightswitch,turnon light,use light': async (g) => {
+    'turnon|use|push|flip|throw lightswitch,turnon light,use light': async (g) => {
       await g.say(
         lit(g)
           ? 'You find the light switch by rainbow-light and flip it. Click. Nothing. Click-click-click. Nothing. The stairwell lights run on the Monolith, like everything else in this building, including apparently your patience.'

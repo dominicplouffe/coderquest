@@ -47,7 +47,7 @@ const ACT1: Hint[] = [
 
 const ACT2: Hint[] = [
   [(g) => !f(g, 'king_talked'), 'That old king seems to be in charge around here. Sort of.', 'TALK TO KING.'],
-  [(g) => !f(g, 'jar_taken'), 'Something important was thrown away in the Heap to the east. The Garbage Collector there collects anything nobody references.', 'WEAR BADGE before entering the Heap, so you\'re referenced. Then TAKE JAR.'],
+  [(g) => !f(g, 'jar_taken'), 'Something important was thrown away in the Heap, east of the Boot Sector. The Garbage Collector there collects anything nobody references.', 'WEAR BADGE before entering the Heap, so you\'re referenced. Then TAKE JAR.'],
   [(g) => !f(g, 'forest_refactored'), 'The Spaghetti Forest to the north is a tangled mess. It\'s practically begging for a refactor.', 'In the forest, type REFACTOR SPAGHETTI (or UNTANGLE CODE).'],
   [(g) => !f(g, 'vim_solved'), 'There\'s a poor process at the Stack Tower who has been stuck in Vim since 1991. You know how to exit Vim, right?', 'SAY :Q! to the process. (Colon, Q, exclamation point.)'],
   [(g) => !f(g, 'node_given'), 'The Oracle will answer you now. Something is missing from the bridge over the Null Void.', 'ASK ORACLE ABOUT BRIDGE.'],

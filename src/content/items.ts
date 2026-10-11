@@ -80,7 +80,7 @@ export const ITEMS: ItemDef[] = [
       s.hline(4, 14, 17, dith(14, 6, 8));
     }),
     verbs: {
-      'talk duck,explain ?,explain * duck,ask duck ?,hint,tell duck ?,show * duck': async (g) => {
+      'talk duck,use duck,explain ?,explain * duck,ask duck ?,hint,tell duck ?,show * duck': async (g) => {
         await duckHint(g);
       },
       'touch|push|hug duck,squeeze duck': async (g) => {
@@ -360,7 +360,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: 'manual',
     name: 'COBOL Manual',
-    nouns: ['manual', 'cobol manual', 'book', 'cobol book', 'reference', 'reference manual', 'cobol'],
+    nouns: ['manual', 'cobol manual', 'book', 'cobol book', 'reference', 'reference manual', 'cobol', 'documentation', 'docs', 'cobol documentation', 'cobol docs'],
     look: '"COBOL-85 Reference Manual, Volume 1 of 7." 1,200 pages of the most soporific prose ever committed to paper. Denis has annotated it in three colors of ink.',
     icon: icon((s) => {
       s.rect(3, 3, 13, 15, 2);
@@ -371,7 +371,7 @@ export const ITEMS: ItemDef[] = [
       s.hline(3, 17, 18, 0);
     }),
     verbs: {
-      'read manual': async (g) => {
+      'read|open manual': async (g) => {
         if (g.room?.id === 'dragon') return false;
         await g.say('You open to a random page. "PERFORM VARYING WS-IDX FROM 1 BY 1 UNTIL WS-IDX > WS-MAX..." Your eyelids grow heavy. Your head droops. You snap awake. This book is a weapon.');
       },

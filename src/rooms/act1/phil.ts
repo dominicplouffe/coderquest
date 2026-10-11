@@ -686,6 +686,7 @@ export const phil: RoomDef = {
       await philStops(g, "I've got the handset, Dominic. I've had it for two hours. Mr. Henderson is very... thorough.");
     },
     'take|water|touch philplant': 'You leave the plant alone. It is thriving in here, which makes one of you.',
+    'look drawer': "Phil's desk drawers, and the little drawers in the credenza under the windows. All of them are, in Phil's words, for CEO eyes only.",
     'look denis': async (g) => g.say('Denis is down in the basement. Up here, there is only young Denis, in the photo on the wall: ponytail, a pager on each hip, and a cable draped over his shoulder like a scarf, grinning in front of the Monolith in 1987.'),
     'jump window,climb window': "The windows are sealed. Phil had them sealed after a regrettable incident involving a golf ball and the parking lot. Also: no. Absolutely not.",
     'read *': readAsLook,

@@ -726,7 +726,7 @@ export const basement: RoomDef = {
       if (!g.flag('panel_open')) return void (await g.say('The labels are inside the panel. The outside just says "Y2K READY!", which is the kind of promise you learn not to trust.'));
       await g.say("1: MONOLITH - DO NOT TOUCH!!!\n2: VENDING MACHINES\n3: BASEMENT AUX");
     },
-    'turnoff|flip|push|pull|turn|use|attack|cut|break breaker|panel|power,turnoff|flip|pull|attack|cut power': async (g, c) => {
+    'turnoff|flip|throw|push|pull|turn|use|attack|cut|break breaker|panel|power,turnoff|flip|throw|pull|attack|cut power': async (g, c) => {
       const all = c.words.includes('all') || c.words.includes('every') || c.words.includes('everything');
       if (c.verb === 'attack' && c.noun === 'panel' && !all && c.num === null) return void (await g.say('You give the panel a good whack. It whacks back with a faint 60-cycle hum. Let\'s use the switches like a professional.'));
       await breaker(g, c.num, false, all);
@@ -749,10 +749,10 @@ export const basement: RoomDef = {
     },
     'fix|repair cable,fix|repair jbox': "You're a software engineer. Your relationship with hardware is strictly \"turn it off and on again\". Though turning it OFF might be a start.",
     'turnoff cable|jbox|sparks,unplug|turnoff puddle': 'There is no switch on the cable itself. Power comes from somewhere. Probably that breaker panel down the hall.',
-    'turnoff|flip|push|pull|turn|cut|use aux': async (g) => breaker(g, 3, false),
+    'turnoff|flip|throw|push|pull|turn|cut|use aux': async (g) => breaker(g, 3, false),
     'turnon|reset aux': async (g) => breaker(g, 3, true),
     'look|read aux': (g) => g.say(`Breaker 3, labeled BASEMENT AUX in Denis's handwriting.${safe(g) ? ' It is off.' : ''}`),
-    'turnoff|flip|push|pull|turn|cut vendbreaker': async (g) => breaker(g, 2, false),
+    'turnoff|flip|throw|push|pull|turn|cut vendbreaker': async (g) => breaker(g, 2, false),
     'go|enter puddle': async (g) => {
       // walking THROUGH it, not just up to it
       const fromEast = g.player.x > 200;

@@ -803,6 +803,8 @@ export const breakroom: RoomDef = {
     ...COMPUTER_NOUNS,
     machine: ['machine', 'machines'],
     vent: ['vent', 'air vent', 'smoke detector', 'detector', 'smoke alarm'],
+    fridgefood: ['ketchup', 'ketchup packet', 'oat milk', 'milk', 'carton', 'meal prep', 'meal prep boxes', 'meal prep box', 'chicken', 'rice', 'leftovers', 'groceries'],
+    sign: ['sign', 'signs', 'snacks sign'],
     mike: ['mike', 'guy', 'man', 'dude', 'salesman', 'sales guy', 'person', 'someone', 'somebody', 'blond guy', 'suit'],
     towels: ['paper towels', 'paper towel', 'towels', 'towel'],
     water: ['water', 'tap water', 'glass of water'],
@@ -818,11 +820,11 @@ export const breakroom: RoomDef = {
       if (!c.noun && !g.near('coffeemaker', 60)) return false;
       await rebootMachine(g);
     },
-    'turnoff|unplug coffeemaker|machine|computer|cord|cmdisplay,pull cord,turn coffeemaker|cord,flip coffeemaker|cord,push|use cord': async (g, c) => {
+    'turnoff|unplug coffeemaker|machine|computer|cord|cmdisplay,pull cord,turn coffeemaker|cord,flip|throw coffeemaker|cord,push|use cord': async (g, c) => {
       await g.approach([CM.x + 13, 118]);
       g.player.dir = 'up';
       if (g.flag('coffee_off')) {
-        if (c.verb === 'flip' || c.verb === 'push' || c.verb === 'use' || c.verb === 'turn') return void (await bootMachine(g, 'You flip the power switch back on. The SmartBrew chimes.'));
+        if (c.verb === 'flip' || c.verb === 'throw' || c.verb === 'push' || c.verb === 'use' || c.verb === 'turn') return void (await bootMachine(g, 'You flip the power switch back on. The SmartBrew chimes.'));
         return void (await g.say("It's already off."));
       }
       await g.pose(null, 'reach', 400);
@@ -1053,7 +1055,15 @@ export const breakroom: RoomDef = {
       await g.say('You reach for the sandwich. The label stares back at you: "I KNOW WHO YOU ARE." You decide you don\'t want to find out whether that\'s true.');
       if (g.actor('mike')) await mikeSays(g, "Dom. DOM. I can see you. I can always see you.");
     },
-    'take|drink milk,take ketchup,eat ketchup,take food,eat food': "Everything in that fridge is either expired, labeled with a threat, or both.",
+    'take|drink|eat fridgefood,take|eat food': async (g) => {
+      if (!g.flag('br_fridge_open')) return void (await g.say("The fridge is closed. And honestly, you've seen what's in there."));
+      await g.say('Everything in that fridge is either expired, labeled with a threat, or both.');
+    },
+    'look fridgefood': async (g) => {
+      if (!g.flag('br_fridge_open')) return void (await g.say('The fridge is closed.'));
+      await g.say('Oat milk that expired in March, eleven meal-prep boxes that all say "CHICKEN + RICE (DAY 3)", and a single ketchup packet, holding the fort.');
+    },
+    'look|read sign': 'Signs of the times: a SNACKS sign on the vending machine, a yellow WARNING sticker on its side, and the IT poster: "HAVE YOU TRIED TURNING IT OFF AND ON AGAIN?"',
     'take fridge': "It's a fridge. Even you can't carry a fridge, and you once carried a 42U server rack up three flights of stairs.",
     // ---------------- dressing
     'open|use microwave': async (g) => {

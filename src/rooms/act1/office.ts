@@ -455,8 +455,9 @@ export const office: RoomDef = {
   raw: async (g, text) => {
     if (await act1Raw(g, text)) return true;
     // "it's not your fault, Aidan" and friends
-    if (!g.flag('aidan_comforted') && /aidan|aiden|intern/i.test(text) && /not your fault|its ok|it s ok|okay|dont worry|don t worry|blameless|it happens|no big deal|relax|come out|its fine|it s fine|not mad/i.test(normalize(text))) {
-      await rerun(g, 'comfort aidan');
+    if (/aidan|aiden|intern/i.test(text) && /not your fault|its ok|it s ok|okay|dont worry|don t worry|blameless|it happens|no big deal|relax|come out|its fine|it s fine|not mad/i.test(normalize(text))) {
+      if (!g.flag('aidan_comforted')) await rerun(g, 'comfort aidan');
+      else await g.talk('aidan', "I know, I know. Blameless. I'm putting that in the postmortem in bold. Thanks, Dominic.");
       return true;
     }
     if (/^\s*(erase|wipe|clean|scrub)\b/i.test(text)) {

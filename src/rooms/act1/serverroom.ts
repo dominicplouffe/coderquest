@@ -310,7 +310,7 @@ async function wakeScene(g: Game) {
   await convo(g, [
     ['adriana', '...Dominic?'],
     ['me', "Welcome back. The patch is in. The bug's in a jar. Well, it was. It's a butterfly now. Long story."],
-    ['adriana', 'I was there for the good part. Nice work in the Core.'],
+    ['adriana', "I logged out a while ago and must have dozed off watching the console. Then the date tables just... went green. Nice work in the Core."],
   ]);
   ad.pose = null;
   await g.walk(ad, CHAIR_A - 2, CHAIR_Y + 16, { direct: true });
@@ -536,7 +536,9 @@ async function askDenis(g: Game, c: Command) {
     line = act3(g) ? 'Sharpest architect this building ever had. Wrote the fix while two threads were sitting on her. Hmph. Kids these days. Impressive kids.' : "Smartest one of the lot. Went in three hours ago to find out what's wrong. Vitals are fine. She's just... not coming out. Something's holding her.";
   else if (has('aidan', 'intern', 'kid'))
     line = act3(g) && g.flag('y2k_told') ? "I owe that boy an apology. And a cable. Maybe two cables." : "The intern? He followed the runbook. Step four: 'Restart the Monolith.' I wrote that in 1988. As a JOKE. Nobody was supposed to actually DO it.";
-  else if (has('bug', 'heisenbug', 'butterfly', 'jar', 'patch', 'date routine', 'kingdom', 'inside', 'dragon'))
+  else if (has('dragon'))
+    line = act3(g) ? "A dragon? Made of COBOL? And you READ it to sleep? Hah! Told you that manual was a weapon." : g.flag('denis_trust') ? "Here be dragons. In there, the old parts only speak COBOL. Keep that manual handy." : "Here be dragons. In there, the oldest parts of her are older than you, and some of them only speak COBOL.";
+  else if (has('bug', 'heisenbug', 'butterfly', 'jar', 'patch', 'date routine', 'kingdom', 'inside'))
     line = act3(g)
       ? g.flag('y2k_told')
         ? 'A two-digit year. Twenty-seven years I guarded that machine, and the thing eating her was MY bug all along. Hmph. Good work in there, kid.'
