@@ -108,6 +108,21 @@ original input.
 Order of dispatch: room `raw` → global easter eggs → room `verbs` → hotspot `look` → room
 `look` → carried items' verbs → global verbs → `content/defaults.ts` fallback.
 
+Built-in conveniences (no room code needed):
+* **Pronouns** — `it/them/him/her` are replaced with the last thing/person mentioned
+  (`Game.applyPronouns`), so "take the mug", "look at it" works everywhere.
+* **Travel** — "go to the break room", "walk back to the office", "take the stairs" walk Dominic
+  through as many currently-open exits as needed (`travelTo` in `content/defaults.ts`; room names
+  live in `ROOM_ALIASES`). Locked exits (`when` false) are never used, so the room's own
+  "it's locked" response still fires.
+* **Questions** — "where am I", "what is X", "who is Y", "where is Z", "how do I…", "what now"
+  (`content/globals.ts`).
+* **Vocabulary scope** — a room's `nouns` and hotspot nouns are known everywhere but only *mean*
+  something in that room; elsewhere they resolve to "you don't see that here". Items, cast names
+  and built-ins are global.
+* **Try Again** after a death restores the state from just before the fatal command (or the room
+  entrance), never while Dominic stands inside a `zone`.
+
 ### Game API (`g`) used in handlers
 
 ```ts
