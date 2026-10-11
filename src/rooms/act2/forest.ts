@@ -310,11 +310,11 @@ export const forest: RoomDef = {
       ? 'The Spaghetti Forest. Noodle trees loop and twirl overhead, meatballs nestle in their crowns, and GOTO signs point in every direction at once.\n\nBut the path north is now clean, straight and well documented, flanked by two neat columns of perfectly parallel noodles. It leads toward a faint magenta glow.'
       : 'The Spaghetti Forest. Noodle trees loop and twirl overhead, tangled into one another so thoroughly that nobody can tell where one ends and the next begins. Red meatballs nestle in their crowns. GOTO signs point in every direction at once.\n\nTo the north, the path disappears into a dense, impenetrable tangle of spaghetti.',
   hotspots: [
-    { id: 'canopy', nouns: ['canopy', 'branches', 'vines', 'sky', 'overhead'], area: [0, 0, 320, 30], look: 'Overhead, strands of spaghetti drape from tree to tree like vines. Nobody knows which tree any of them belongs to. Nobody dares to find out.' },
+    { id: 'canopy', nouns: ['canopy', 'branches', 'vines', 'overhead'], area: [0, 0, 320, 30], look: 'Overhead, strands of spaghetti drape from tree to tree like vines. Nobody knows which tree any of them belongs to. Nobody dares to find out.' },
     { id: 'tower', nouns: ['tower', 'stack', 'stack tower', 'distant tower', 'stack overflow tower'], area: [60, 0, 22, 100], look: 'Far to the west, through the noodles, a tower of stacked boxes rises into the sky and keeps going. The Stack Overflow Tower.' },
     {
       id: 'trees',
-      nouns: ['trees', 'tree', 'noodle trees', 'noodle tree', 'forest', 'spaghetti', 'noodles', 'noodle', 'pasta', 'strands', 'trunk', 'crown'],
+      nouns: ['trees', 'tree', 'noodle trees', 'noodle tree', 'forest', 'spaghetti', 'noodles', 'noodle', 'pasta', 'strands', 'trunk'],
       area: [0, 20, 320, 120],
       look: 'Trees made of spaghetti: bundles of noodles twisting up into crowns of twirled pasta, every strand looping into every other tree. A forest where everything is coupled to everything else. It smells faintly of oregano and legacy code.',
     },
@@ -351,8 +351,12 @@ export const forest: RoomDef = {
           : 'A weathered stone, carved: "TODO: REFACTOR THIS MESS (1989)". Below it, in a dozen different hands: "+1", "still todo", "who wrote this??", "ME. -D.", "won\'t fix".',
     },
     { id: 'fork', nouns: ['fork', 'giant fork', 'sword', 'tines'], area: [284, 104, 28, 78], at: [278, 174], look: 'A giant silver fork, plunged into the ground like a sword in a stone, with spaghetti wound around its tines. Legend says whoever pulls it out will become Lead Developer.' },
-    { id: 'bugs', nouns: ['bugs', 'bug', 'fireflies', 'firefly', 'lights', 'glowing bugs', 'insects', 'lightning bugs', 'glowing bug'], area: [0, 0, 0, 0], look: "Fireflies? No: glowing little bugs, drifting between the noodle trees. In a forest like this they're a natural part of the ecosystem. Nobody's ever had the time to fix them." },
+    { id: 'bug', nouns: ['bugs', 'fireflies', 'firefly', 'lights', 'glowing bugs', 'insects', 'lightning bugs', 'glowing bug'], area: [0, 0, 0, 0], look: "Fireflies? No: glowing little bugs, drifting between the noodle trees. In a forest like this they're a natural part of the ecosystem. Nobody's ever had the time to fix them." },
   ],
+  nouns: {
+    sky: ['sky', 'stars'],
+    floor: ['floor', 'ground', 'grid'],
+  },
   exits: [
     { area: [96, 186, 128, 4], to: 'boot', at: [160, 120, 'down'], dir: 'south' },
     { area: [0, 128, 5, 61], to: 'stack', at: [300, 170, 'left'], dir: 'west' },
@@ -409,9 +413,15 @@ export const forest: RoomDef = {
         if (typeof out === 'string') await g.say(out);
       }
     },
-    'catch|take bugs,attack bugs': 'You swipe at a glowing bug. It flits out of reach, and when you look again it seems to be blinking on purpose. Fine. It\'s a feature now.',
-    'listen ?': 'Somewhere deep in the forest, a faint voice repeats: "GOTO 10... GOTO 10... GOTO 10..."',
-    'smell ?': 'The air smells of oregano, garlic, and legacy code.',
+    'catch|take bug,attack bug': 'You swipe at a glowing bug. It flits out of reach, and when you look again it seems to be blinking on purpose. Fine. It\'s a feature now.',
+    'go path,follow path': async (g) => {
+      if (!g.flag('forest_refactored')) return void (await g.say('The path north is blocked by a solid tangle of spaghetti. Somebody will have to refactor it first.'));
+      await g.walk(null, 160, 102);
+    },
+    'look floor': 'The forest floor: a dark grid, with a faint glow of marinara at the horizon.',
+    'listen ?,listen': 'Somewhere deep in the forest, a faint voice repeats: "GOTO 10... GOTO 10... GOTO 10..."',
+    'smell ?,smell': 'The air smells of oregano, garlic, and legacy code.',
+    'look sky': 'Overhead, strands of spaghetti drape from tree to tree like vines. Through the gaps, a few faint stars.',
     'look up': 'Spaghetti, draped from tree to tree overhead. A meatball dangles directly above you, held up by nothing but tradition.',
     ...CYBER_VERBS,
   },
@@ -425,7 +435,7 @@ export const forest: RoomDef = {
       await g.say(t.startsWith('list') ? '10 GOTO 10' : '?SYNTAX ERROR IN 10');
       return true;
     }
-    if (REFACTOR_RE.test(t) && (FOREST_NOUN_RE.test(t) || t.split(/\s+/).length === 1)) {
+    if (REFACTOR_RE.test(t) && (FOREST_NOUN_RE.test(t) || /^\S+( up| out)?$/.test(t))) {
       await refactor(g);
       return true;
     }

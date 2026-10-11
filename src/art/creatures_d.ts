@@ -320,40 +320,44 @@ export function drawHourglass(s: Surface, x: number, y: number, t: number) {
 
 // ======================================================================= Heisenbug
 
-// A glitchy beetle-ish insect, facing right. w=wing, B=body, b=body shade,
-// H=head, e=eye, a=antenna, l=leg, x=hot pixel.
+// A glitchy beetle-ish insect, facing right. w=wing, B=shell, b=spots,
+// S=shell rim, H=head, e=eye, a=antenna, m=mandible, l=leg, x=hot pixel.
 const BUG_A = [
-  '.......a..a....',
-  '........aa.....',
-  '..ww.ww.a......',
-  '.wwwwwwww......',
-  '..wwwwwwwHHH...',
-  '.BBbBBbBBHeHa..',
-  'xBbBBbBBbHHHH..',
-  '.BBbBBbBBHH....',
-  '..l.l..l..l....',
-  '.l..l...l..l...',
+  '............a..a.',
+  '.............aa..',
+  '...wwww.....a....',
+  '.wwwwwwww..a.....',
+  '..wwwwwwwwHHH....',
+  '...SSSSSSHHHHH...',
+  '..SBBbBBbSHHeHm..',
+  '.SBbBBbBBbSHHHHm.',
+  'xSBBbBBbBBSHHH...',
+  '..SSSSSSSS.H.....',
+  '..l..l..l..l.....',
+  '.l..l..l..l......',
 ];
 const BUG_B = [
-  '.......a..a....',
-  '........aa.....',
-  '........a......',
-  '..wwwwwww......',
-  '.wwwwwwwwHHH...',
-  '.BBbBBbBBHeHa..',
-  'xBbBBbBBbHHHH..',
-  '.BBbBBbBBHH....',
-  '.l..l..l...l...',
-  '..l..l..l.l....',
+  '............a..a.',
+  '.............aa..',
+  '............a....',
+  '...........a.....',
+  '..wwwwwwww.HHH...',
+  '.wwwSSSSSSHHHHH..',
+  '..SBBbBBbSHHeHm..',
+  '.SBbBBbBBbSHHHHm.',
+  'xSBBbBBbBBSHHH...',
+  '..SSSSSSSS.H.....',
+  '.l..l..l..l......',
+  '..l..l..l..l.....',
 ];
-const BUG_KEY = (body: number, shade: number, eye: number, wing: number) => ({ w: wing, B: body, b: shade, H: 0, e: eye, a: 8, l: 0, x: 12 });
+const BUG_KEY = (body: number, shade: number, eye: number, wing: number) => ({ w: wing, B: body, b: 12, S: shade, H: shade, e: eye, a: 7, m: 15, l: 7, x: 12 });
 
 const bugCache = new Map<string, Img>();
 function bugBase(frame: number, body: number, shade: number, eye: number, wing: number, flip: boolean): Img {
   const key = `${frame}|${body}|${shade}|${eye}|${wing}|${flip}`;
   let img = bugCache.get(key);
   if (!img) {
-    img = imgFromRows(frame ? BUG_B : BUG_A, BUG_KEY(body, shade, eye, wing), 7, 9);
+    img = imgFromRows(frame ? BUG_B : BUG_A, BUG_KEY(body, shade, eye, wing), 8, 11);
     if (flip) img = flipImg(img);
     bugCache.set(key, img);
   }
@@ -392,7 +396,7 @@ export function heisenbugImg(t: number, flip: boolean, intensity = 1): Img {
     if (x >= 0 && y >= 0 && x < W && y < H) out[y * W + x] = c;
   };
   // chromatic ghosts: red to one side, blue to the other
-  const split = intensity > 0 && hash(t * 13 + 1) < 0.55 * intensity ? 1 + Math.floor(hash(t * 5) * 2) : 0;
+  const split = intensity > 0 && hash(Math.floor(t / 3) * 13 + 1) < 0.3 * intensity ? 1 + Math.floor(hash(t * 5) * 2) : 0;
   for (let y = 0; y < base.h; y++) {
     // sheared scanlines
     const shear = intensity > 0 && hash(Math.floor(t / 2) * 31 + y) < 0.12 * intensity ? Math.round((hash(t + y * 17) - 0.5) * 6) : 0;

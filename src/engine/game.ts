@@ -2,7 +2,7 @@ import { Surface, Img, TRANSPARENT } from './raster';
 import { RGBA32, DARKER } from './palette';
 import { Actor, Dir } from './actor';
 import { WalkMap, Pt } from './walk';
-import { parse, Command, makeLocal, addNouns, ANIMATE } from './parser';
+import { parse, Command, makeLocal, addNouns, addKnownNouns, ANIMATE } from './parser';
 import {
   Modal,
   MessageBox,
@@ -193,8 +193,8 @@ export class Game {
   registerRooms(list: RoomDef[]) {
     for (const r of list) {
       this.rooms[r.id] = r;
-      if (r.nouns) addNouns(r.nouns);
-      for (const h of r.hotspots ?? []) addNouns({ [h.id]: h.nouns ?? [] });
+      if (r.nouns) addKnownNouns(r.nouns);
+      for (const h of r.hotspots ?? []) addKnownNouns({ [h.id]: h.nouns ?? [] });
     }
   }
   registerItems(list: ItemDef[]) {
@@ -1227,8 +1227,16 @@ export class Game {
         break;
     }
     this.script(async () => {
-      if (await this.dispatch(c)) return;
-      await this.hooks.fallback(this, c);
+      if (!(await this.dispatch(c))) await this.hooks.fallback(this, c);
+      // "Try Again" resumes from just before the last command, not the room entrance
+      if (!this.dying && this.room && !this.room.cutscene && this.playing) {
+        this.checkpoint = this.serialize();
+        try {
+          localStorage.setItem(AUTOSAVE_KEY, this.checkpoint);
+        } catch {
+          /* ignore */
+        }
+      }
     });
   }
 

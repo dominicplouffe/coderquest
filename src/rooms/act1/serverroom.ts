@@ -371,7 +371,7 @@ async function talkAdrianaAct3(g: Game) {
 }
 
 async function useConsole(g: Game, ms = 900) {
-  await g.approach('console');
+  await g.approach('computer');
   g.player.dir = 'up';
   for (let i = 0; i < Math.round(ms / 150); i++) {
     g.sfx('type');
@@ -401,7 +401,7 @@ async function review(g: Game) {
     return void (await g.talk(a, "Review what? There's nothing to review yet. Commit it first. I don't review vibes."));
   }
   if (g.flag('reviewed')) return void (await g.talk(a, 'I already approved it. Twice, if you count the part where I wrote it.'));
-  await g.approach('console');
+  await g.approach('computer');
   g.player.dir = 'up';
   await g.walk(a, CONSOLE.x + CONSOLE.w + 10, CONSOLE.front + 6, { direct: true });
   a.dir = 'left';
@@ -566,6 +566,16 @@ async function askDenis(g: Game, c: Command) {
   else await g.talk(d, line);
 }
 
+function doorBlock(g: Game): string {
+  return `Denis steps in front of the door. "Where do you think you're going? ${g.flag('midnight') ? "It's Saturday" : "It's almost midnight"}. The deploy is HERE."`;
+}
+
+function monolithLook(g: Game): string {
+  if (g.flag('deployed')) return 'THE MONOLITH, fully online and humming happily: every light green, every reel turning smooth and even. It looks, if a mainframe can look anything, relieved.';
+  if (act3(g)) return `THE MONOLITH, calmer now. Its reels turn slowly, its light panel pulses a patient amber, and its display reads ${display(g)[0]}. It feels like the whole machine is holding its breath.`;
+  return "THE MONOLITH. A 1987 mainframe the size of a family car: two tape drives with their reels twitching back and forth, a main cabinet with MONOLITH in white letters on a blue header and a light panel flashing a frantic panic, and a disk cabinet humming under a smoked dome. A red beacon spins on top.\n\nIt has not been rebooted since 1999. Until today.";
+}
+
 // ------------------------------------------------------------------ the room
 
 export const serverroom: RoomDef = {
@@ -589,13 +599,10 @@ export const serverroom: RoomDef = {
   hotspots: [
     {
       id: 'monolith',
-      nouns: ['monolith', 'mainframe', 'the monolith', 'cabinet', 'cabinets', 'machine', 'computer', 'beast'],
+      nouns: ['monolith', 'mainframe', 'the monolith', 'cabinet', 'cabinets', 'beast'],
       area: [100, 14, 150, 94],
       at: [176, 124],
-      look: (g) =>
-        act3(g)
-          ? (g.flag('deployed') ? 'THE MONOLITH, fully online and humming happily: every light green, every reel turning smooth and even. It looks, if a mainframe can look anything, relieved.' : 'THE MONOLITH, calmer now. Its reels turn slowly, its light panel pulses a patient amber, and its display reads ' + display(g)[0] + '. It feels like the whole machine is holding its breath.')
-          : "THE MONOLITH. A 1987 mainframe the size of a family car: two tape drives with their reels twitching back and forth, a main cabinet with MONOLITH in white letters on a blue header and a light panel flashing a frantic panic, and a disk cabinet humming under a smoked dome. A red beacon spins on top.\n\nIt has not been rebooted since 1999. Until today.",
+      look: (g) => monolithLook(g),
     },
     {
       id: 'reels',
@@ -605,22 +612,22 @@ export const serverroom: RoomDef = {
       look: (g) => (act3(g) ? 'The tape reels turn slowly and evenly now, like a heartbeat after a long run.' : "Two big tape drives behind smoked glass. Their reels jerk back and forth, back and forth, like they're looking for something they lost in 1999. Which, in a sense, they are."),
     },
     {
-      id: 'lights',
-      nouns: ['lights', 'light panel', 'panel', 'blinkenlights', 'lamps', 'blinking lights', 'leds'],
+      id: 'lightpanel',
+      nouns: ['light panel', 'panel', 'blinkenlights', 'blinking lights', 'leds', 'lamps'],
       area: [CPU + 2, 38, 52, 26],
       at: [188, 124],
       look: (g) => (act3(g) ? 'Sixty little lamps, pulsing a calm, patient amber.' : 'Sixty little lamps in a grid, flashing red and yellow in a pattern that, if you squint, spells out "HELP" in a font from 1987.'),
     },
     {
-      id: 'display',
-      nouns: ['display', 'status display', 'readout', 'status', 'screen panel'],
+      id: 'statusdisplay',
+      nouns: ['status display', 'readout', 'status', 'status screen'],
       area: [CPU + 4, 65, 48, 11],
       at: [188, 124],
       look: (g) => `The Monolith's status display reads: ${display(g)[0]}.`,
     },
     {
       id: 'button',
-      nouns: ['button', 'red button', 'big red button', 'restart button', 'reset button', 'cover', 'note', 'duct tape', 'tape x'],
+      nouns: ['button', 'red button', 'big red button', 'restart button', 'reset button', 'cover', 'duct tape', 'tape x', 'no note'],
       area: [CPU + 2, 76, 26, 20],
       at: [178, 124],
       look: 'A big red button labeled RESTART, under a hinged plastic cover. The cover has been duct-taped shut in a big X, with a sticky note slapped on top that just says "NO". The tape is fresh. Very fresh. Today-fresh.',
@@ -650,8 +657,8 @@ export const serverroom: RoomDef = {
       look: (g) => (act3(g) ? "The beacon on top of the Monolith has stopped spinning. Small mercies." : "A red rotating beacon on top of the Monolith, sweeping the ceiling with alarm. It hasn't spun since 1999. It seems to be making up for lost time."),
     },
     {
-      id: 'console',
-      nouns: ['console', 'terminal', 'crt', 'operator console', 'desk', 'screen', 'monitor', 'green screen', 'console keyboard'],
+      id: 'computer',
+      nouns: ['computer', 'console', 'terminal', 'crt', 'operator console', 'desk', 'screen', 'monitor', 'display', 'green screen', 'console keyboard', 'workstation', 'pc'],
       area: [CONSOLE.x, 88, CONSOLE.w, CONSOLE.front - 88],
       at: [128, CONSOLE.front + 8],
       look: (g) =>
@@ -661,7 +668,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'racks',
-      nouns: ['racks', 'rack', 'servers', 'server racks', 'new servers', 'cloud', 'sticky note', 'migration'],
+      nouns: ['racks', 'rack', 'servers', 'server racks', 'new servers', 'cloud', 'cloud label', 'migration'],
       area: [254, 44, 56, 64],
       at: [282, 124],
       look: 'Two modern server racks, humming politely beside the Monolith like teenagers at a family dinner. A yellowed label on one says "CLOUD MIGRATION PHASE 1 (2009)". Someone has added, in pen: "lol".',
@@ -687,7 +694,7 @@ export const serverroom: RoomDef = {
         act3(g)
           ? 'The chair you just spent four hours in. It has a you-shaped dent in it now.'
           : g.flag('helmet_connected')
-            ? 'The empty chair next to Adriana, with Krishna\'s helmet waiting on the seat, cabled into the Monolith. It looks a lot like a dentist\'s chair, if your dentist were a mainframe.'
+            ? 'The empty chair next to Adriana. The new cable runs from the Monolith\'s port to the helmet in your hands, and the chair is waiting. It looks a lot like a dentist\'s chair, if your dentist were a mainframe.'
             : 'An empty chair next to Adriana\'s, facing out from the Monolith. It looks like it has been waiting for someone.',
     },
     {
@@ -713,7 +720,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'cables',
-      nouns: ['cables', 'cable', 'pegboard', 'cable wall', 'wires', 'wire', 'coils', 'cords'],
+      nouns: ['cables', 'pegboard', 'cable wall', 'coils', 'cable collection'],
       area: [54, 21, 26, 48],
       at: [66, 124],
       look: "Denis's cable wall: every cable ever made, coiled with loving precision and hung by type. RS-232. Centronics. Token Ring. SCSI. A coil of something labeled 'DO NOT ASK'. If a cable has ever existed, Denis has it.",
@@ -727,7 +734,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'door',
-      nouns: ['door', 'steel door', 'vault door', 'exit', 'wheel', 'fire sign', 'halon', 'halon sign'],
+      nouns: ['door', 'steel door', 'vault door', 'wheel', 'fire sign', 'halon', 'halon sign'],
       area: [0, 48, 22, 136],
       at: [14, 166],
       look: 'The inside of the vault door back to the basement corridor, with a locking wheel. Next to it, a red sign: "IN CASE OF FIRE: HALON SYSTEM WILL DISCHARGE. ALSO, RUN."',
@@ -745,17 +752,27 @@ export const serverroom: RoomDef = {
       to: 'basement',
       at: [264, 136, 'down'],
       dir: 'west|out',
-      blocked: (g) => (act3(g) && !g.flag('deployed') ? "Denis steps in front of the door. \"Where do you think you're going? It's almost midnight. The deploy is HERE.\"" : undefined),
+      blocked: (g) => (act3(g) && !g.flag('deployed') ? doorBlock(g) : undefined),
     },
   ],
   nouns: {
     gertrude: ['gertrude', 'pdp', 'pdp 11', 'pdp11'],
     adrianashelmet: ['v1', 'v1 helmet', 'her helmet', 'adrianas helmet', 'prototype helmet', 'colander'],
-    ndi: ['neural debugging interface'],
     riddle: ['riddle', 'question', 'light bulb', 'lightbulb', 'bulb'],
   },
   raw: async (g, text) => {
     const t = text.toLowerCase().trim();
+    // a couple of verbs the parser doesn't know
+    if (/^(lie|lay|nap)\b/.test(t) && /cot|bed|down|nap/.test(t)) {
+      if (g.actor('denis')) await g.talk('denis', act3(g) ? 'After the deploy, you can sleep for a week. On your OWN cot.' : 'That is MY cot. Get your own Y2K.');
+      return true;
+    }
+    if (/^(lift|raise|pry up|pull up)\b/.test(t) && /tile|floor/.test(t)) {
+      await g.approach([60, 148]);
+      await g.pose(null, 'reach', 400);
+      await g.say('You lift a floor tile and peer underneath. Cables. Forty years of cables, in strata, like rock layers: beige, gray, blue, and one brief, regrettable period of orange. Also a mummified sandwich. You put the tile back.');
+      return true;
+    }
     // Act I: the riddle
     if (!act3(g) && g.flag('riddle_asked') && !g.flag('denis_trust') && g.actor('denis')) {
       if (ANSWER_OK.test(t) && isAnswer(text)) {
@@ -862,7 +879,7 @@ export const serverroom: RoomDef = {
       await g.talk('adriana', "Thanks, but I'm good. Unless it's a commit. Is it a commit?");
     },
     // ---- the helmet
-    'wear helmet,use helmet,wear ndi,sit chairb,sit': async (g, c) => {
+    'wear helmet,use helmet,sit chairb,sit': async (g, c) => {
       if (act3(g)) {
         if (c.verb === 'sit') return void (await g.say("You've done enough sitting in that chair for one night. Possibly for one lifetime."));
         return void (await g.say("Not a chance. You've seen the inside of that machine, and once was plenty. Besides, the work out here isn't finished."));
@@ -893,7 +910,7 @@ export const serverroom: RoomDef = {
       await g.say("Unplug it? You'd have to explain to Denis why you're unplugging his most important cable. You leave it.");
     },
     // ---- the Monolith
-    'push|use|open|attack|turnon button,reboot|turnoff|unplug|fix monolith,reboot,turnoff power,push|pull|flip|turn monolith': async (g, c) => {
+    'push|use|open|attack|turnon button,reboot|turnoff|unplug|fix monolith,reboot|turnoff|unplug computer,reboot,turnoff power,push|pull|flip|turn monolith': async (g, c) => {
       if (c.verb === 'reboot' && !c.noun) return false;
       const d = g.actor('denis');
       if (d) {
@@ -912,7 +929,7 @@ export const serverroom: RoomDef = {
     'touch|pet|hug monolith': async (g) => {
       if (g.actor('denis')) await g.talk('denis', act3(g) ? "Gentle. She's had a long night." : 'Easy. EASY. She bites.');
     },
-    'take reels|disk|lights|monolith': 'The Monolith weighs about as much as a small house. It is going nowhere. Neither, apparently, is Denis.',
+    'take reels|disk|lightpanel|monolith|computer': 'The Monolith weighs about as much as a small house. It is going nowhere. Neither, apparently, is Denis.',
     'kick|attack monolith': async (g) => {
       if (g.actor('denis')) await g.talk('denis', 'Kick her and I kick you. And I have been kicking things since 1971.');
     },
@@ -925,7 +942,7 @@ export const serverroom: RoomDef = {
     },
     'deploy ?': deploy,
     'wait ?': waitForMidnight,
-    'use|type console,type ?,login console,turnon console,type': async (g, c) => {
+    'use|type computer,type ?,login computer,turnon computer,type': async (g, c) => {
       if (act3(g)) {
         const w = c.rest.toLowerCase();
         if (/commit/.test(w)) return commit(g);
@@ -970,10 +987,18 @@ export const serverroom: RoomDef = {
       await g.pose(null, 'reach', 400);
       await g.say('You lift a floor tile and peer underneath. Cables. Forty years of cables, in strata, like rock layers: beige, gray, blue, and one brief, regrettable period of orange. Also a mummified sandwich. You put the tile back.');
     },
+    'look computer': async (g, c) => {
+      // "machine" / "computer" here means the Monolith; "terminal", "screen" etc. mean the console
+      if (!['machine', 'computer'].includes(c.nounWord ?? '')) return false;
+      await g.say(monolithLook(g));
+    },
+    'look light': async (g) => {
+      await g.say(act3(g) ? 'The light panel on the Monolith: sixty little lamps, pulsing a calm, patient amber.' : 'The light panel on the Monolith: sixty little lamps flashing red and yellow in a pattern that, if you squint, spells out "HELP" in a font from 1987. Up on the ceiling, a pair of fluorescent fixtures hum along.');
+    },
     'take|steal|look/through racks': 'The racks hum at you politely. You leave them be.',
     'take clock': "It's bolted to the wall. In a server room, everything is bolted to something.",
     'open|use door': async (g) => {
-      if (act3(g) && !g.flag('deployed')) return void (await g.say("Denis steps in front of the door. \"Where do you think you're going? It's almost midnight. The deploy is HERE.\""));
+      if (act3(g) && !g.flag('deployed')) return void (await g.say(doorBlock(g)));
       await g.walk(null, 8, 168);
     },
     'listen,listen ?': async (g) => {
@@ -982,6 +1007,8 @@ export const serverroom: RoomDef = {
     'smell,smell ?': 'Ozone, hot dust, chicken ramen, and the unmistakable smell of 1987.',
   },
   enter(g, from) {
+    // the only way in during Act II is logging out of the Core: that's Act III
+    if (act(g) === 2) g.set('act', 3);
     mode = null;
     domHelmet = false;
     parts = null;

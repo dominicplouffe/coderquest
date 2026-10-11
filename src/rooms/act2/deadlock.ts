@@ -266,6 +266,31 @@ function paint(p: Surface, g: Game) {
   // ---- floor
   neonFloor(p, 108, 190, { near: 5, far: 1, radial: 1, spacing: 34, glow: 13 });
   p.hline(0, 319, 109, 5);
+  // a giant combination dial engraved in the floor
+  {
+    const dx = 160,
+      dy = 160,
+      rx = 104,
+      ry = 22;
+    p.ellipse(dx, dy, rx + 2, ry + 1, 0);
+    p.ellipseO(dx, dy, rx + 2, ry + 1, 5);
+    p.ellipseO(dx, dy, rx - 8, ry - 3, 1);
+    p.ellipseO(dx, dy, rx - 34, ry - 9, 5);
+    for (let k = 0; k < 40; k++) {
+      const a = (k / 40) * Math.PI * 2;
+      const c = Math.cos(a),
+        sn = Math.sin(a);
+      const big = k % 5 === 0;
+      p.line(dx + c * (rx - (big ? 8 : 4)), dy + sn * (ry - (big ? 3 : 1)), dx + c * rx, dy + sn * ry, big ? 13 : 5);
+    }
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2 - Math.PI / 2;
+      const lbl = String(k * 5);
+      p.micro(Math.round(dx + Math.cos(a) * (rx - 16) - microWidth(lbl) / 2), Math.round(dy + Math.sin(a) * (ry - 6) - 2), lbl, 5);
+    }
+    // the dial's pointer notch, at the back
+    p.poly([dx - 4, dy - ry - 4, dx + 4, dy - ry - 4, dx, dy - ry + 1], 13);
+  }
   // stenciled floor text (worn yellow paint)
   const fy = 160;
   const fw = microWidth('ONE THREAD AT A TIME');
@@ -423,6 +448,13 @@ function overlay(g: Game, s: Surface, t: number) {
   const secs = free ? -1 : 3 * 3600 + Math.floor(g.state.ticks / 60) % 3600 + 47;
   const txt = secs < 0 ? 'WAIT --:--:--' : `WAIT ${String(Math.floor(secs / 3600)).padStart(2, '0')}:${String(Math.floor(secs / 60) % 60).padStart(2, '0')}:${String(secs % 60).padStart(2, '0')}`;
   s.micro(MX + 2, MY + 56, txt, free ? 2 : 12);
+  // the floor dial: something keeps trying combinations
+  {
+    const a = Math.sin(t / 170) * 2.4 + Math.sin(t / 61) * 0.5 - Math.PI / 2;
+    const c = Math.cos(a),
+      sn = Math.sin(a);
+    s.line(160 + c * 96, 160 + sn * 19, 160 + c * 104, 160 + sn * 22, 15);
+  }
   // keyhole glint
   if (t % 240 < 30) {
     const k = t % 240;
@@ -659,7 +691,7 @@ const LOOK_THREAD = (g: Game, w: Who) => {
   const n = lockOf(w),
     m = lockOf(other(w));
   if (!g.flag('adriana_free'))
-    return `${tname(w)}: a guard robot built on a wooden-looking spool, wound tight with ${w === 'a' ? 'cyan' : 'magenta'} thread. It clutches LOCK ${n} to its chest with both arms and glares at ${tname(other(w))}, which is holding LOCK ${m}, which is the lock it wants. An hourglass spins over its head. It has been spinning for three hours.`;
+    return `${tname(w)}: a guard robot built around a giant spool, wound tight with ${w === 'a' ? 'cyan' : 'magenta'} thread. It clutches LOCK ${n} to its chest with both arms and glares at ${tname(other(w))}, which is holding LOCK ${m}, which is the lock it wants. An hourglass spins over its head. It has been spinning for three hours.`;
   if (g.flag('deadlock_who') === w) return `${tname(w)} is on break, possibly for the first time since 1999. Its eye has gone soft and happy. It's humming a little. There are crumbs on its spool.`;
   return `${tname(w)} has finished its work and terminated cleanly. EXIT 0. It stands powered down, at peace, like a process that has done exactly one thing well.`;
 };
@@ -686,15 +718,15 @@ export const deadlock: RoomDef = {
     threads: ['thread', 'threads', 'robot', 'robots', 'guard', 'guards', 'guard robots', 'both threads', 'both robots', 'spool', 'spools', 'bots'],
     locks: ['lock', 'locks', 'padlock', 'padlocks', 'lock 1', 'lock 2', 'lock one', 'lock two', 'lock1', 'lock2', 'mutex', 'mutexes'],
     hourglass: ['hourglass', 'hourglasses', 'spinner', 'wait cursor', 'cursor', 'busy cursor'],
-    eye: ['eye', 'red eye', 'visor'],
+    roboteye: ['red eye', 'red eyes', 'visor', 'visors', 'robot eye', 'robot eyes'],
     fork: ['fork', 'forks'],
     spaghetti: ['spaghetti', 'pasta', 'noodles'],
     chair: ['chair', 'chairs'],
   },
   hotspots: [
     {
-      id: 'padlockwall',
-      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'wall', 'back wall', 'steel'],
+      id: 'wall',
+      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'back wall', 'steel'],
       area: [66, 0, 188, 108],
       look: "The back wall of the chamber is one titanic padlock: a steel shackle arching up into the dark, rivets the size of your fist, and a maker's plate reading MUTEX & CO 1987. Its keyhole is big enough to stand in. Somebody did, and put a cage there.",
     },
@@ -718,8 +750,8 @@ export const deadlock: RoomDef = {
       look: 'A sign: DINING PHILOSOPHERS, SINCE 1965. Below it a little sconce flickers, as if it too is waiting for a fork.',
     },
     {
-      id: 'graph',
-      nouns: ['graph', 'wait for graph', 'waitfor graph', 'monitor', 'screen', 'diagram', 'cycle', 'terminal'],
+      id: 'computer',
+      nouns: ['graph', 'wait for graph', 'waitfor graph', 'diagram', 'cycle'],
       area: [252, 12, 66, 54],
       look: (g) =>
         g.flag('adriana_free')
@@ -728,19 +760,25 @@ export const deadlock: RoomDef = {
     },
     {
       id: 'timer',
-      nouns: ['timer', 'clock', 'counter', 'display', 'wait timer', 'panel'],
+      nouns: ['timer', 'clock', 'counter', 'wait timer', 'panel'],
       area: [252, 66, 66, 16],
       look: (g) => (g.flag('adriana_free') ? 'The wait timer reads --:--:--. Nobody is waiting for anything anymore.' : 'A wait timer. It has been counting for a little over three hours. It looks like it expects to keep going until the heat death of the universe.'),
     },
     {
       id: 'chains',
       nouns: ['chain', 'chains'],
-      area: [70, 0, 10, 42],
+      area: [70, 0, 182, 0, 182, 2, 250, 2, 250, 42, 242, 42, 242, 4, 78, 4, 78, 42, 70, 42],
       look: 'Chains hang from the dark ceiling. Decorative, mostly. Concurrency has a strong aesthetic.',
     },
     {
+      id: 'floor',
+      nouns: ['dial', 'combination', 'combination dial'],
+      area: [54, 134, 212, 50],
+      look: 'The floor is engraved with a giant combination dial, 0 to 35, with ONE THREAD AT A TIME stenciled across its middle. A faint light ticks back and forth around its rim, as if something has been trying combinations for a very long time. It is, after all, a lock.',
+    },
+    {
       id: 'floortext',
-      nouns: ['floor', 'stencil', 'floor text', 'lettering', 'writing', 'words'],
+      nouns: ['stencil', 'floor text', 'lettering', 'writing', 'words'],
       area: [106, 154, 108, 12],
       look: 'Stenciled on the floor in worn yellow paint: ONE THREAD AT A TIME. It is, in fairness, very good advice.',
     },
@@ -755,8 +793,8 @@ export const deadlock: RoomDef = {
           : 'A cage of glowing bars set into the keyhole, crowned with a plaque: CRITICAL SECTION. The door has two hasps, one for LOCK 1 and one for LOCK 2. Only a thread holding both locks may open it. Each thread holds one. You can see the problem.',
     },
     {
-      id: 'cagedoor',
-      nouns: ['door', 'cage door', 'hasp', 'hasps', 'hinge'],
+      id: 'door',
+      nouns: ['cage door', 'hasp', 'hasps', 'hinge'],
       area: [144, 64, 36, 50],
       at: [160, 128],
       look: (g) =>
@@ -817,7 +855,7 @@ export const deadlock: RoomDef = {
   },
   verbs: {
     // ---------------------------------------------------------------- the solution
-    'give candy threada|threadb|threads': async (g, c) => {
+    'give|use|throw|put candy threada|threadb|threads': async (g, c) => {
       if (!g.has('candy')) return false;
       if (g.flag('adriana_free')) return void (await g.say("The deadlock is already resolved. Besides, you're out of BREAK! bars."));
       await giveBreak(g, whoFromNoun(g, c.noun2));
@@ -874,7 +912,7 @@ export const deadlock: RoomDef = {
       await g.say("Two brass padlocks. Thread A clutches LOCK 1. Thread B clutches LOCK 2. The cage needs both. Each thread needs both. Mathematically, this is a beautiful situation. Practically, it's three hours old.");
     },
     'look hourglass': 'Little spinning hourglasses hover over the threads: the universal symbol for "please wait." They have been spinning since about five o\'clock.',
-    'look eye': 'Red, slit-shaped, unblinking. The threads glare at each other with perfect concentration.',
+    'look roboteye': 'Red, slit-shaped, unblinking. The threads glare at each other with perfect concentration.',
     'talk threada|threadb': async (g, c) => {
       const w = c.noun === 'threadb' ? 'b' : 'a';
       const a = g.actor(`thread${w}`)!;
@@ -919,7 +957,7 @@ export const deadlock: RoomDef = {
     },
     'break ?': async (g, c) => {
       if (c.noun === 'candy') return void (await g.say("Break the BREAK! bar? Snap it in half and nobody gets a proper break. Give the whole thing to someone who needs it."));
-      if (c.noun === 'cage' || c.noun === 'cagedoor') return void (await g.say('The bars are made of solid mutual exclusion. They do not break. They wait.'));
+      if (c.noun === 'cage' || c.noun === 'door') return void (await g.say('The bars are made of solid mutual exclusion. They do not break. They wait.'));
       if (c.noun === 'threada' || c.noun === 'threadb' || c.noun === 'threads') return void (await g.say("They don't even notice. They're very busy waiting."));
       if (!c.noun && !g.flag('adriana_free'))
         return void (await g.say("You yell \"BREAK!\" The threads don't even flinch. That keyword works on loops, not on locks. These two need an actual break. Something you could hand them, maybe."));
@@ -948,14 +986,14 @@ export const deadlock: RoomDef = {
       await threadSay(g, w, 'MINE.');
       await g.say(`${tname(w)}'s grip tightens with the quiet intensity of a toddler holding a toy. LOCK ${lockOf(w)} is not going anywhere until it decides to let go.`);
     },
-    'unlock|open cage|cagedoor,pull|push cagedoor,use * cage|cagedoor': async (g) => {
+    'unlock|open cage|door,pull|push door,use * cage|door': async (g) => {
       if (g.flag('adriana_free')) return void (await g.say("It's already open."));
-      await g.approach('cagedoor');
+      await g.approach('door');
       await g.pose(null, 'reach', 300);
       g.sfx('doorlocked');
       await g.say('The door rattles but holds. It needs LOCK 1 and LOCK 2 released into its hasps, and only a thread holding both can do that. Right now each thread is holding exactly half of a solution.');
     },
-    'pry|break|attack cage|cagedoor': 'The bars are made of solid mutual exclusion. They do not bend. They do not break. They wait.',
+    'pry|break|attack cage|door': 'The bars are made of solid mutual exclusion. They do not bend. They do not break. They wait.',
     'enter|go cage': async (g) => {
       if (!g.flag('adriana_free')) return void (await g.say("The cage is locked. And it's already occupied. One at a time, as the floor says."));
       await g.say("You consider stepping into the critical section, then remember everything that just happened in there. You'll pass.");
@@ -1017,10 +1055,18 @@ export const deadlock: RoomDef = {
     'eat|take spaghetti': 'It has been on that plate since 1965. It has seen things. It is less pasta now and more of a legacy system.',
     'sit chair,sit': 'You could sit at the philosophers\' table, but then you would need two forks to eat, and there are only five forks for five places, and... no. No.',
     'take chains': 'They are bolted to the ceiling. Which ceiling, you are not sure. It is very dark up there.',
-    'take graph|timer': 'They are bolted to the wall.',
+    'take computer|timer': 'They are bolted to the wall.',
     'look/through|look/in keyhole': "Past the cage, the keyhole goes back a long way into the dark, glowing faintly blue. Some locks are deeper than they look.",
     'take hourglass': "You try to grab the hourglass. Your hand passes through it. It's a cursor, not a thing.",
     'catch ?': 'There is nothing in here to catch. Everything in here is already stuck.',
+    'take|pull|push cage': async (g) => void (await g.say(g.flag('adriana_free') ? "It's anchored into the keyhole. Leave it; it's a historic site now." : "It's anchored into the keyhole of a padlock the size of a house. Also, it's occupied.")),
+    'climb cage|wall': "You'd just be a second thing stuck to the cage.",
+    'drop|unlock|open adriana,drop locks': async (g) => {
+      if (g.flag('adriana_free')) return void (await g.say("She's already out."));
+      await g.say("That's the plan. But the cage only opens when LOCK 1 and LOCK 2 are both released, and each one is clutched by a thread that won't let go until it gets the other.");
+    },
+    'search table': 'Five plates of spaghetti from 1965, five forks, and a candle stub that burned out sometime during the Johnson administration. No clues. No second forks.',
+    'listen': async (g) => void (await g.say(g.flag('adriana_free') ? 'Quiet, mostly. Somewhere to your left, a happy little munching sound.' : 'The tick of the wait timer. The faint whine of two cooling fans running flat out. Two robots, straining with all their might to do absolutely nothing.')),
   },
 };
 

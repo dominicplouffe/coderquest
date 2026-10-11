@@ -14,8 +14,8 @@ import { award } from '../../content/points';
 
 const HZ = 112;
 // the Oracle's CRT
-const CRT = { x: 126, y: 66, w: 68, h: 58 };
-const GLASS = { x: 135, y: 73, w: 50, h: 34 };
+const CRT = { x: 116, y: 50, w: 88, h: 74 };
+const GLASS = { x: 126, y: 58, w: 66, h: 46 };
 const GHOST_X = 236,
   GHOST_Y = 113;
 
@@ -95,7 +95,7 @@ function crt(p: Surface) {
     p.vline(GLASS.x + GLASS.w + 2, GLASS.y - 3, GLASS.y + GLASS.h + 2, 15);
     p.rect(GLASS.x - 1, GLASS.y - 1, GLASS.w + 2, GLASS.h + 2, 0);
     // badge, vents, knobs, power light
-    p.micro(x + 5, y + h - 9, 'ORACLE', 6);
+    p.micro(x + 8, y + h - 10, 'ORACLE', 6);
     p.rect(x + w - 16, y + h - 10, 3, 3, 0);
     p.plot(x + w - 15, y + h - 9, 8);
     p.rect(x + w - 10, y + h - 10, 3, 3, 0);
@@ -162,8 +162,8 @@ function poppedFrame(p: Surface) {
 const FRAMES = ['main()', 'init()', 'parse()', 'parse()', 'parse()', 'parse()', 'parse()', 'parse()', 'parse()'];
 
 function drawTower(s: Surface, t: number) {
-  const fw = 58,
-    fh = 12;
+  const fw = 64,
+    fh = 10;
   let y = CRT.y - fh;
   for (let i = 0; i < FRAMES.length; i++) {
     const sway = i < 2 ? 0 : Math.round(Math.sin(t / 50 + i * 0.4) * (i - 1) * 0.35 + i * 0.6);
@@ -174,12 +174,12 @@ function drawTower(s: Surface, t: number) {
     s.vline(x, y, y + fh - 1, 6);
     s.vline(x + fw - 1, y, y + fh - 1, 6);
     s.hline(x, x + fw - 1, y + fh - 1, 0);
-    s.micro(x + 3, y + 4, FRAMES[i], i === 0 ? 15 : 14);
+    s.micro(x + 3, y + 3, FRAMES[i], i === 0 ? 15 : 14);
     // a few lines of "code" on the right of each frame
     const r = rng(i * 13 + 5);
     for (let k = 0; k < 3; k++) {
       const lx = x + 32 + Math.floor(r() * 4);
-      s.hline(lx, lx + 4 + Math.floor(r() * 14), y + 3 + k * 3, k === 1 ? 3 : 7);
+      s.hline(lx, lx + 4 + Math.floor(r() * 14), y + 2 + k * 3, k === 1 ? 3 : 7);
     }
     y -= fh;
   }
@@ -421,9 +421,10 @@ export const stack: RoomDef = {
       area: [128, 0, 72, 66],
       look: 'A tower of call frames: main() at the bottom, then init(), then parse(), which calls parse(), which calls parse(), which calls parse()... all the way up past the sky. A warning flickers at the top: DEPTH 9998. Somebody forgot the base case, and the stack is two frames from overflowing.',
     },
+    { id: 'computer', nouns: ['computer', 'monitor', 'screen', 'terminal', 'display', 'tv', 'machine', 'pc', 'casing'], area: [CRT.x, CRT.y + CRT.h - 14, CRT.w, 18], at: [160, 140], look: 'An enormous beige 1987 CRT monitor, big as a wardrobe, with the whole Stack Overflow Tower balanced on top of it. On its screen glows the face of the Oracle. You get the feeling the monitor is load-bearing in more ways than one.' },
     {
       id: 'oracle',
-      nouns: ['oracle', 'face', 'crt', 'monitor', 'screen', 'head', 'computer', 'terminal', 'tv'],
+      nouns: ['oracle', 'face', 'crt', 'head', 'giant face'],
       area: [CRT.x, CRT.y, CRT.w, CRT.h + 4],
       at: [160, 140],
       look: (g) =>
@@ -431,9 +432,10 @@ export const stack: RoomDef = {
           ? 'The Oracle: a giant face glowing green inside an enormous 1987 CRT monitor, which is also, structurally, the foundation of the entire tower. Its eyes follow you with mild interest. You have the reputation now. ASK ORACLE ABOUT something.'
           : 'The Oracle: a giant face glowing green inside an enormous 1987 CRT monitor, which is also, structurally, the foundation of the entire tower. It has seen every question ever asked, and has found most of them to be duplicates. Its eyes follow you, unimpressed.',
     },
+    { id: 'ghost', area: [220, 72, 32, 56], when: (g) => !g.flag('vim_solved'), look: 'A translucent ghost process, PID 1991, hovering just above the floor and clutching its head. Beneath it trails a column of little blue tildes, and at the bottom, blinking forever: -- INSERT --. It has been stuck in Vim since 1991.' },
     {
       id: 'board',
-      nouns: ['board', 'reputation', 'rep', 'scoreboard', 'sign', 'reputation board', 'badge', 'number'],
+      nouns: ['board', 'reputation', 'rep', 'scoreboard', 'reputation board', 'number', 'gold badge'],
       area: [20, 56, 78, 74],
       at: [59, 140],
       look: (g) => (g.flag('vim_solved') ? 'A board reads YOUR REPUTATION: 51. Fifty-one! Enough to ask a question. Not enough to vote to close one, which is probably for the best.' : 'A board reads YOUR REPUTATION: 1. One point, awarded for existing. It is not enough to do anything at all.'),
@@ -490,22 +492,22 @@ export const stack: RoomDef = {
     },
     'look vim': 'Vim: a text editor of enormous power, which the ghost has been unable to leave for thirty-five years. Leaving Vim is, famously, the hardest thing in computing.',
     // ---- the Oracle
-    'talk oracle': async (g) => {
+    'talk oracle|computer': async (g) => {
       await talkOracle(g);
     },
-    'ask oracle ?,ask ?,tell oracle ?': async (g, c) => {
-      if (c.noun === 'ghost') return false;
+    'ask oracle|computer ?,ask ?,tell oracle|computer ?': async (g, c) => {
+      if (c.noun === 'ghost' || c.noun === 'duck') return false;
       await askOracle(g, c.raw);
     },
-    'give * oracle,show * oracle,put * oracle': async (g, c) => {
+    'give * oracle|computer,show * oracle|computer,put * oracle|computer': async (g, c) => {
       if (!c.noun || !g.has(c.noun)) return false;
       await g.approach('oracle');
       await oracleSay(g, c.noun === 'duck' ? 'Ah, a rubber duck. The Oracle approves. The duck has answered more questions than the Oracle ever will.' : 'The Oracle does not accept gifts. Bounties, however, are always welcome.');
     },
-    'attack|kick oracle,push|kick tower,attack tower': async (g) => {
+    'attack|kick oracle|computer,push|kick tower,attack tower': async (g) => {
       await g.say('You consider shoving the tower. Then you look up at the 9,998 frames swaying overhead, all of them balanced on that one monitor, and decide that is precisely the kind of thing that ends with a stack overflow on your head.');
     },
-    'climb tower,climb oracle,climb frames,climb': async (g) => {
+    'climb tower,climb oracle,climb computer,climb frames,climb': async (g) => {
       await g.approach([160, 134]);
       g.player.dir = 'up';
       await g.say('You haul yourself up onto main(). Then init(). Then parse(). Then parse(). Then parse()...');
@@ -518,7 +520,7 @@ export const stack: RoomDef = {
     },
     'take tower,take frames,pop tower,pop frames,push frames': "It's a stack. Everybody pushes. Nobody ever pops.",
     'take popped,push popped,read popped': 'The frame is heavy and cracked. Inside, its return value is still waiting for somebody to read it: 0. Disappointing, after such a long fall.',
-    'turnoff|unplug|reboot oracle': 'Turn off the Oracle? The entire tower is standing on it. Also, the community would never forgive you.',
+    'turnoff|unplug|reboot oracle|computer': 'Turn off the Oracle? The entire tower is standing on it. Also, the community would never forgive you.',
     'look board,read board': async (g) => {
       const h = g.hotspot('board');
       if (h && typeof h.look === 'function') {
@@ -527,6 +529,8 @@ export const stack: RoomDef = {
       }
     },
     'look sky,read sky,read words': 'Words hang in the dark like constellations: POSSIBLE DUPLICATE. WORKS ON MY MACHINE. [CLOSED]. MARKED AS DUPLICATE. EDIT: NEVERMIND, FIXED IT. That last one never says how.',
+    'listen ?,listen': 'A low electrical whine from the old CRT, the creak of 9,998 frames swaying overhead, and, faintly, the sound of somebody typing "+1" somewhere very far away.',
+    'smell ?,smell': 'Hot dust on an old monitor. The smell of a thousand all-nighters.',
     'look up': 'The tower of call frames sways overhead and vanishes into the stars. parse() calling parse() calling parse(), forever. At the very top, a warning blinks red.',
     ...CYBER_VERBS,
   },
@@ -538,6 +542,13 @@ export const stack: RoomDef = {
         return true;
       }
       await solveVim(g, text);
+      return true;
+    }
+    if (/^(up ?vote|downvote|down vote|vote|accept|accept answer|mark (as )?accepted|flag|close)\b/.test(t)) {
+      if (/^down/.test(t)) await g.say('You downvote the tower. Nothing happens, except that you now feel slightly worse about yourself. That is how downvotes work.');
+      else if (/^(accept|mark)/.test(t)) await g.say(g.flag('node_given') ? 'You mark the Oracle\'s answer as accepted. A small green checkmark glows on its forehead for a moment. The Oracle looks, for the first time in years, almost happy.' : 'There is no answer to accept yet. You have to ask a question first.');
+      else if (/^(flag|close)/.test(t)) await g.say('You lack the reputation to do that. Everyone always does.');
+      else await g.say('You upvote the tower. Somewhere far above, a little orange chevron rises into the sky. It is a small kindness, and the Stack has very few of those.');
       return true;
     }
     if (ghost(g)) {

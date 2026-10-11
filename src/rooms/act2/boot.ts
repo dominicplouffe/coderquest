@@ -423,8 +423,10 @@ function overlay(g: Game, s: Surface, t: number) {
   const k = (t % 100) / 100;
   if (k < 0.85) s.ellipseO(160, 150, Math.round(6 + k * 22), Math.round(2 + k * 6), k < 0.4 ? 15 : k < 0.65 ? 11 : 3);
   // bits drifting up from the floor
-  driftBits(s, t, 10, 100, 120, 70, 31, 8, [3, 9, 11]);
-  driftBits(s, t, 190, 110, 120, 60, 32, 6, [3, 9, 11]);
+  // (only over open floor, never in front of the signs)
+  const open = (x: number, y: number) => x >= 0 && x < 320 && y >= 0 && y < 190 && g.pic.pri[y * 320 + x] === 0;
+  driftBits(s, t, 10, 100, 120, 70, 31, 8, [3, 9, 11], -1, open);
+  driftBits(s, t, 190, 110, 120, 60, 32, 6, [3, 9, 11], -1, open);
   // throne (bobbing) — the King actor bobs with it
   const bob = Math.round(Math.sin(t / 45) * 1.6);
   drawThrone(s, KX, KY + bob, t);
@@ -434,8 +436,23 @@ function overlay(g: Game, s: Surface, t: number) {
   drawMaterialize(g, s, t);
 }
 
-function front(_g: Game, s: Surface, t: number) {
-  drawThrone(s, KX, KY + Math.round(Math.sin(t / 45) * 1.6), t, 'front');
+function front(g: Game, s: Surface, t: number) {
+  const by = KY + Math.round(Math.sin(t / 45) * 1.6);
+  // the punch-card robe: a scatter of little rectangular holes
+  if (g.actor('king')) {
+    for (const [dx, dy] of [
+      [-3, -20],
+      [-1, -18],
+      [2, -20],
+      [3, -17],
+      [-3, -15],
+      [1, -15],
+      [-2, -12],
+      [3, -13],
+    ])
+      s.plot(KX + dx, by + dy, 7);
+  }
+  drawThrone(s, KX, by, t, 'front');
 }
 
 // ------------------------------------------------------------------ room
@@ -455,7 +472,7 @@ export const boot: RoomDef = {
   look: "The Boot Sector, the very first place the Monolith reads when it wakes up. A neon grid stretches to a black horizon in every direction, humming in A-flat. BIOS messages hang in the void like constellations, and a giant disk platter turns slowly overhead.\n\nOn a throne of floppy disks, floating a few feet off the ground, sits a very old king.",
   hotspots: [
     { id: 'sky', nouns: ['sky', 'stars', 'space', 'heavens', 'darkness', 'black'], area: [0, 0, 320, 80], look: 'Black, infinite, and dotted with stars that are almost certainly dead pixels.' },
-    { id: 'grid', nouns: ['grid', 'floor', 'ground', 'lines', 'neon', 'neon grid'], area: [0, 93, 320, 97], look: 'A perspective grid of glowing cyan lines, stretching to the horizon. Every few seconds a pulse of light races along it toward you, like a clock signal. Which, technically, it is.' },
+    { id: 'floor', nouns: ['floor', 'ground', 'grid', 'lines', 'neon', 'neon grid'], area: [0, 93, 320, 97], look: 'A perspective grid of glowing cyan lines, stretching to the horizon. Every few seconds a pulse of light races along it toward you, like a clock signal. Which, technically, it is.' },
     { id: 'horizon', nouns: ['horizon', 'distance'], area: [44, 70, 80, 22], look: 'The horizon. North, a tangle of yellow noodles. East, a skyline of junk. West, nothing at all, which is somehow the most unsettling of the three.' },
     { id: 'road', nouns: ['road', 'roads', 'path', 'paths', 'north road', 'data path'], area: [136, 96, 48, 46], look: 'Glowing data paths run north toward the Spaghetti Forest, east to the Heap, and west to where the floor simply... stops.' },
     { id: 'forest', nouns: ['forest', 'spaghetti forest', 'trees', 'noodles', 'spaghetti'], area: [124, 74, 72, 18], look: 'Far to the north, a forest of tangled yellow noodles rises from the grid. Even from here it looks hard to maintain.' },
@@ -469,7 +486,7 @@ export const boot: RoomDef = {
     },
     {
       id: 'bios',
-      nouns: ['bios', 'text', 'messages', 'bios text', 'post', 'letters', 'words', 'cursor', 'constellation', 'constellations'],
+      nouns: ['bios', 'text', 'messages', 'bios text', 'post', 'letters', 'words', 'constellation', 'constellations', 'keyboard error'],
       area: [2, 2, 140, 46],
       look: 'BIOS messages float in the void, enormous and gray:\n\nMONOLITH BIOS V1.987 (C) 1987\nCPU: 1 KERNEL, 0 SPARES\nMEMORY TEST: 640K OK\nDETECTING USERS..... 1 FOUND\nBOOT DEVICE: /DEV/NDI0\nUPTIME SINCE LAST BOOT: 0 DAYS\nKEYBOARD ERROR. PRESS F1 TO CONTINUE.\n\nThe user it found is you.',
     },
@@ -491,6 +508,10 @@ export const boot: RoomDef = {
   ],
   nouns: {
     sign: ['sign', 'signs', 'signpost', 'signposts', 'arrows', 'neon sign', 'neon signs'],
+    shadow: ['shadow', 'thrusters', 'thruster', 'cushion'],
+    bits: ['bits', 'digits', 'ones', 'zeros', 'zeroes', 'embers', 'binary'],
+    cursor: ['cursor', 'blinking cursor'],
+    f1: ['f1', 'f1 key'],
     crown: ['crown'],
     beard: ['beard', 'kings beard'],
   },
@@ -500,7 +521,8 @@ export const boot: RoomDef = {
       await kingTalk(g);
     },
     'ask king ?,ask ?,tell king ?': async (g, c) => {
-      // the King is the only one here to ask
+      // the King is the only one here to ask (the duck answers for itself)
+      if (c.noun === 'duck') return false;
       if (!g.flag('king_talked')) return void (await kingTalk(g));
       await kingAsk(g, c.raw);
     },
@@ -554,10 +576,21 @@ export const boot: RoomDef = {
     },
     'take pad': "It's a pad of light about two meters across. Even your pockets have limits.",
     'take bios,take text': "You grab at the floating letters. They're just light. The 'K' in '640K' wobbles indignantly.",
-    'touch grid,touch floor': 'The grid is cool, smooth and faintly ticklish. It vibrates at precisely the CPU clock rate.',
-    'take grid': "You'd need a very large clipboard.",
+    'touch floor': 'The grid is cool, smooth and faintly ticklish. It vibrates at precisely the CPU clock rate.',
+    'take floor': "You'd need a very large clipboard.",
     'look/through void,jump void,enter void': "From here the void is a long way west, past the end of the road. That's a problem for the room over there.",
     'look up': 'Overhead, a disk platter the size of a moon turns slowly against the stars.',
+    'look shadow,look/under throne': 'Beneath the floating throne, its shadow hums on the grid. A few stray bits drip from the thrusters like sparks from a welding torch.',
+    'kiss|hug king,touch king': async (g) => {
+      await kingSay(g, 'Steady, User! A simple bow will suffice. We are not so informal in Ring Zero.');
+    },
+    'listen ?,listen': 'A deep, steady hum: the grid, the disk, the slow tick of a system clock. And, faintly, King Kernel humming the POST beep to himself.',
+    'smell ?,smell': 'The Boot Sector smells like a brand-new computer: warm plastic, ozone, and possibility.',
+    'take bits,look bits,catch bits': 'Little ones and zeros drift up from the grid like embers. You catch a 1. It flips to a 0 in your hand and floats away, giggling in binary.',
+    'push|pull|turn sign,push|pull sign_north|sign_east|sign_west': 'The signs are bolted firmly to the grid. Their arrows are not up for debate.',
+    'look sky': 'Black, infinite, and dotted with stars that are almost certainly dead pixels. A huge disk platter hangs among them, and BIOS messages float nearby like constellations.',
+    'push f1': 'You press F1 to continue. The BIOS considers this, and continues. It was going to anyway.',
+    'look cursor': 'A blinking cursor floats at the end of the BIOS messages, waiting patiently for input. It has been waiting since 1987. It can wait a bit longer.',
     'look down': 'Glowing grid lines, and your own pixelated sneakers.',
     ...CYBER_VERBS,
   },

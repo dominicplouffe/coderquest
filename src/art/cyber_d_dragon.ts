@@ -121,9 +121,14 @@ function headDetails(p: Surface, ox: number, oy: number, open: boolean, asleep: 
   // reading glasses perched on the snout (slid to the tip when asleep)
   const gx = asleep ? 26 : 20,
     gy = asleep ? 2 : 0;
-  p.ellipse(X(gx), Y(gy), 5, 3, dith(11, 1, 6));
-  p.ellipseO(X(gx), Y(gy), 5, 3, 0);
-  p.hline(X(gx) - 4, X(gx) + 4, Y(gy) - 3, 8);
+  // half-moon lens: dark rim below, a glint, the snout showing through
+  p.ellipseO(X(gx), Y(gy), 5, 3, 8);
+  p.hline(X(gx) - 4, X(gx) + 4, Y(gy) + 3, 0);
+  p.plot(X(gx) - 5, Y(gy) + 1, 0);
+  p.plot(X(gx) + 5, Y(gy) + 1, 0);
+  p.plot(X(gx) - 2, Y(gy) - 1, 15);
+  p.plot(X(gx) - 1, Y(gy) - 1, 11);
+  p.plot(X(gx) + 2, Y(gy) + 1, 11);
   p.plot(X(gx - 1), Y(gy - 1), 15);
   p.line(X(gx - 4), Y(gy - 1), X(12), Y(-2), 8);
   // printout beard under the chin

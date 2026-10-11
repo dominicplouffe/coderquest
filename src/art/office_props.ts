@@ -4,6 +4,7 @@
 import { Surface, Img, makeImg, TRANSPARENT, rng, microWidth } from '../engine/raster';
 import { dith, Fill } from '../engine/palette';
 import { X } from '../engine/palette-ext';
+import { ITEMS } from '../content/items';
 
 // ------------------------------------------------------------------ architecture
 
@@ -105,6 +106,11 @@ export function segDigit(p: Surface, x: number, y: number, d: string, on: number
 
 // ------------------------------------------------------------------ furniture
 
+/** A solid highlight color for the top edge of a surface of the given color. */
+export function hlOf(c: number): number {
+  return ({ 0: 8, 1: 9, 2: 10, 3: 11, 4: 12, 5: 13, 6: 14, 7: 15, 8: 7, 15: 7 } as Record<number, number>)[c] ?? 15;
+}
+
 /**
  * A work desk seen from the user's side: the kneehole faces the camera.
  * x = left edge, z = front edge on the floor (priority), w = width.
@@ -131,7 +137,7 @@ export function workDesk(
   p.at(z, () => {
     // desktop
     p.rect(x, yTop, w, depth, top);
-    p.hline(x, x + w - 1, yTop, dith(top, 15, 6));
+    p.hline(x, x + w - 1, yTop, hlOf(top));
     p.rect(x, yFront, w, 2, edge);
     p.hline(x, x + w - 1, yFront + 2, 0);
     // left side panel / right side panel
@@ -172,11 +178,13 @@ export function frontDesk(p: Surface, x: number, z: number, w: number, opts: { h
   const yFront = z - h;
   p.at(z, () => {
     p.rect(x, yTop, w, depth, top);
-    p.hline(x, x + w - 1, yTop, dith(top, 15, 5));
+    p.hline(x, x + w - 1, yTop, hlOf(top));
     p.rect(x - 1, yFront, w + 2, 2, trim === -1 ? top : trim);
     p.rect(x, yFront + 2, w, h - 2, body);
-    p.rect(x + 3, yFront + 5, w - 6, h - 9, opts.panel ?? dith(body, 0, 3));
+    if (opts.panel !== undefined) p.rect(x + 3, yFront + 5, w - 6, h - 9, opts.panel);
     p.frame(x + 3, yFront + 5, w - 6, h - 9, 0);
+    p.hline(x + 4, x + w - 5, yFront + h - 5, hlOf(body));
+    p.vline(x + w - 4, yFront + 6, yFront + h - 5, hlOf(body));
     p.hline(x, x + w - 1, z - 1, 0);
   });
   return yTop + 1;
@@ -396,4 +404,34 @@ function imgFromRowsLocal(rows: string[], key: Record<string, number>): Img {
       img.data[y * w + x] = c ?? TRANSPARENT;
     }
   return img;
+}
+
+/**
+ * The parser's built-in generic nouns, re-declared locally in each office-floor room
+ * so they keep their canonical ids even if another room's hotspot hijacks the word
+ * in the global vocabulary. (Room hotspot nouns still take precedence locally.)
+ */
+export const BASE_NOUNS: Record<string, string[]> = {
+  floor: ['floor', 'ground', 'carpet'],
+  wall: ['wall', 'walls'],
+  ceiling: ['ceiling', 'roof'],
+  door: ['door', 'doors', 'doorway'],
+  window: ['window', 'windows'],
+  light: ['light', 'lights', 'lamp', 'lighting'],
+  self: ['me', 'myself', 'self', 'dominic', 'dom'],
+};
+
+/** The parser's generic "computer" vocabulary, for rooms that actually have computers. */
+export const COMPUTER_NOUNS: Record<string, string[]> = {
+  computer: ['computer', 'pc', 'workstation', 'terminal', 'machine', 'monitor', 'screen', 'display', 'computers'],
+};
+
+/** Local copies of item vocabularies (same canonical ids), immune to global noun hijacking. */
+export function itemNouns(ids: string[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const id of ids) {
+    const it = ITEMS.find((i) => i.id === id);
+    if (it) out[id] = it.nouns;
+  }
+  return out;
 }

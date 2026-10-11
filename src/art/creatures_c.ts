@@ -434,105 +434,111 @@ export interface OracleState {
 
 /**
  * The Oracle's face on a green-phosphor CRT screen (x,y,w,h = the glass).
- * Painted every frame (it blinks, looks at you and talks).
+ * Painted every frame (it blinks, looks at you and talks). The face is laid
+ * out on a 50x34 design grid and scaled to the glass.
  */
 export function drawOracleScreen(s: Surface, x: number, y: number, w: number, h: number, t: number, st: OracleState) {
+  const k = h / 34;
   const cx = x + Math.floor(w / 2);
+  const X = (dx: number) => Math.round(cx + dx * k);
+  const Y = (dy: number) => Math.round(y + dy * k);
   const roll = (t >> 1) % (h + 24);
   const B = 10, // bright phosphor
     M = 2, // mid phosphor
     K = 0; // black
+  const R = 17 * k;
+  const fcy = y + 15 * k;
   // face shape: a broad oval with a long beard
   const faceAt = (xx: number, yy: number) => {
-    const dx = (xx - cx) / 17,
-      dy = (yy - (y + 15)) / 17;
+    const dx = (xx - cx) / R,
+      dy = (yy - fcy) / R;
     if (dx * dx + dy * dy < 1) return true;
-    // beard: a tapering wedge below the chin
-    const by = yy - (y + 24);
-    return by >= 0 && Math.abs(xx - cx) < 12 - by * 0.9;
+    const by = (yy - (y + 24 * k)) / k;
+    return by >= 0 && Math.abs(xx - cx) / k < 12 - by * 0.9;
   };
   for (let yy = 0; yy < h; yy++) {
-    const Y = y + yy;
+    const YY = y + yy;
     const scan = yy % 2 === 1;
     const inRoll = Math.abs(yy - roll + 12) < 3;
     for (let xx = 0; xx < w; xx++) {
-      const X = x + xx;
+      const XX = x + xx;
       let c = K;
-      if (faceAt(X, Y)) {
-        // shaded skin: brighter on the forehead and cheeks
-        const lx = (X - cx) / 17,
-          ly = (Y - (y + 10)) / 14;
-        const light = 1 - (lx + 0.3) ** 2 * 0.6 - ly * ly * 0.5;
-        c = bayerAt(X, Y) < Math.max(0, Math.min(16, light * 18 - 2)) ? M : K;
-        if (Y > y + 25) c = bayerAt(X, Y) < 6 ? M : K; // beard texture
-      } else if (bayerAt(X, Y) < (st.glow ? 3 : 1)) c = M;
-      if (scan && c === M && !inRoll) c = bayerAt(X, Y) < 8 ? M : K;
-      if (inRoll && c === K && bayerAt(X, Y) < 4) c = M;
-      s.plot(X, Y, c);
+      if (faceAt(XX, YY)) {
+        const lx = (XX - cx) / R,
+          ly = (YY - (y + 10 * k)) / (14 * k);
+        const light = 1 - (lx + 0.3) ** 2 * 0.7 - ly * ly * 0.5;
+        const lv = light * 26 - 4;
+        c = bayerAt(XX, YY) < Math.max(0, Math.min(16, lv)) ? M : K;
+        if (lv > 19 && bayerAt(XX, YY) < (lv - 19) * 2) c = B; // highlight
+        if (YY > y + 25 * k) c = bayerAt(XX, YY) < 9 ? M : K; // beard texture
+      } else if (bayerAt(XX, YY) < (st.glow ? 3 : 1)) c = M;
+      if (scan && c === M && !inRoll) c = bayerAt(XX, YY) < 8 ? M : K;
+      if (inRoll && c === K && bayerAt(XX, YY) < 4) c = M;
+      s.plot(XX, YY, c);
     }
   }
   // outline of the face
-  for (let a = 0; a < Math.PI * 2; a += 0.05) {
-    const px = Math.round(cx + Math.cos(a) * 17),
-      py = Math.round(y + 15 + Math.sin(a) * 17);
-    if (py < y + 25 && py >= y) s.plot(px, py, B);
+  for (let a = 0; a < Math.PI * 2; a += 0.03) {
+    const px = Math.round(cx + Math.cos(a) * R),
+      py = Math.round(fcy + Math.sin(a) * R);
+    if (py < y + 25 * k && py >= y) s.plot(px, py, B);
   }
   // beard strands
-  for (let i = -3; i <= 3; i++) s.line(cx + i * 3, y + 25, cx + i * 2, Math.min(y + h - 1, y + 33 - Math.abs(i)), i % 2 ? M : B);
-  // brows: heavy, wise, judgemental
-  const bd = st.stern ? 1 : 0;
-  s.line(cx - 13, y + 7, cx - 3, y + 6 + bd, B);
-  s.line(cx - 13, y + 8, cx - 3, y + 7 + bd, B);
-  s.line(cx + 3, y + 6 + bd, cx + 13, y + 7, B);
-  s.line(cx + 3, y + 7 + bd, cx + 13, y + 8, B);
-  // eyes
-  const ey = y + 12;
-  const look = Math.round(st.look * 2);
-  for (const ex of [cx - 7, cx + 7]) {
+  for (let i = -3; i <= 3; i++) s.line(X(i * 3), Y(25), X(i * 2), Math.min(y + h - 1, Y(33 - Math.abs(i))), i % 2 ? M : B);
+  // eyes: dark sockets, bright whites, pupils that follow you
+  const ey = Y(12);
+  const look = Math.round(st.look * 2 * k);
+  for (const ex of [X(-7), X(7)]) {
+    const ew = Math.round(4.5 * k);
+    s.ellipse(ex, ey + 1, ew + 1, 4, K);
     if (st.blink) {
-      s.hline(ex - 4, ex + 4, ey + 1, B);
+      s.hline(ex - ew, ex + ew, ey + 1, B);
+      s.hline(ex - ew + 1, ex + ew - 1, ey + 2, M);
       continue;
     }
-    s.hline(ex - 3, ex + 3, ey - 1, B);
-    s.hline(ex - 4, ex + 4, ey, B);
-    s.hline(ex - 4, ex + 4, ey + 1, B);
-    s.hline(ex - 3, ex + 3, ey + 2, B);
-    s.rect(ex - 1 + look, ey - 1, 3, 4, K);
-    s.plot(ex + look, ey, 15);
-    s.hline(ex - 3, ex + 3, ey + 4, M);
+    s.ellipse(ex, ey + 1, ew, 2, B);
+    s.rect(ex - 2 + look, ey - 1, 4, 4, K);
+    s.plot(ex - 1 + look, ey, 15);
   }
+  // brows: bushy, wise and judgemental
+  const bd = st.stern ? 1 : 0;
+  s.line(X(-14), Y(7), X(-3), Y(5 + bd), B, 2);
+  s.line(X(3), Y(5 + bd), X(14), Y(7), B, 2);
+  s.line(X(-14), Y(8) + 1, X(-4), Y(6 + bd) + 1, M);
+  s.line(X(4), Y(6 + bd) + 1, X(14), Y(8) + 1, M);
   // nose
-  s.vline(cx, ey + 1, ey + 7, M);
-  s.line(cx + 1, ey, cx + 2, ey + 7, B);
-  s.hline(cx - 2, cx + 3, ey + 8, B);
-  s.plot(cx - 1, ey + 7, K);
-  s.plot(cx + 2, ey + 7, K);
+  s.line(X(-1), ey + 2, X(-2), Y(19), K);
+  s.line(X(1), ey + 1, X(2), Y(19), B);
+  s.hline(X(-3), X(3), Y(20), K);
+  s.plot(X(-3), Y(19), K);
+  s.plot(X(3), Y(19), K);
   // moustache
-  s.line(cx - 7, ey + 12, cx - 1, ey + 10, B);
-  s.line(cx + 7, ey + 12, cx + 1, ey + 10, B);
-  s.line(cx - 6, ey + 12, cx - 1, ey + 11, M);
-  s.line(cx + 6, ey + 12, cx + 1, ey + 11, M);
+  s.line(X(-8), Y(24), X(-1), Y(22), B, 2);
+  s.line(X(8), Y(24), X(1), Y(22), B, 2);
   // mouth
-  const my = ey + 13;
+  const my = Y(25);
   const m = Math.max(0, Math.min(3, Math.round(st.mouth)));
+  const mw = Math.round(4 * k);
   if (m === 0) {
-    s.hline(cx - 4, cx + 4, my, B);
+    s.hline(cx - mw, cx + mw, my, K);
+    s.hline(cx - mw + 1, cx + mw - 1, my + 1, B);
     if (st.stern) {
-      s.plot(cx - 5, my + 1, B);
-      s.plot(cx + 5, my + 1, B);
+      s.plot(cx - mw - 1, my + 1, K);
+      s.plot(cx + mw + 1, my + 1, K);
     } else {
-      s.plot(cx - 5, my - 1, B);
-      s.plot(cx + 5, my - 1, B);
+      s.plot(cx - mw - 1, my - 1, K);
+      s.plot(cx + mw + 1, my - 1, K);
     }
   } else {
-    s.rect(cx - 4, my, 9, m + 1, K);
-    s.hline(cx - 4, cx + 4, my - 1, B);
-    s.hline(cx - 3, cx + 3, my + m + 1, B);
-    s.vline(cx - 5, my, my + m, B);
-    s.vline(cx + 5, my, my + m, B);
+    const mh = Math.round(m * k);
+    s.rect(cx - mw, my, mw * 2 + 1, mh + 1, K);
+    s.hline(cx - mw, cx + mw, my - 1, B);
+    s.hline(cx - mw + 1, cx + mw - 1, my + mh + 1, B);
+    s.vline(cx - mw - 1, my, my + mh, B);
+    s.vline(cx + mw + 1, my, my + mh, B);
   }
   // glass glare
-  s.line(x + 2, y + 2, x + 5, y + 2, 15);
+  s.line(x + 2, y + 2, x + 6, y + 2, 15);
   s.plot(x + 2, y + 3, 15);
   s.plot(x + 2, y + 4, 7);
 }

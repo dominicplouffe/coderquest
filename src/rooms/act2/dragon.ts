@@ -336,16 +336,27 @@ function front(g: Game, s: Surface, t: number) {
   if (fire && info) {
     const age = t - fire.t0;
     const [mx, my] = info.mouth;
-    for (let i = 0; i < 40; i++) {
-      const born = i * 2;
+    // a roaring stream of burning COBOL from the jaws to the target
+    for (let i = 0; i < 90; i++) {
+      const born = i * 0.9;
       const a = age - born;
-      if (a < 0 || a > 40) continue;
-      const k = a / 26;
-      const x = mx + (fire.tx - mx) * k + (hash(i * 7) - 0.5) * 18 * k;
-      const y = my + (fire.ty - my) * k + (hash(i * 13) - 0.5) * 16 * k - Math.sin(k * Math.PI) * 6;
-      const col = a < 6 ? 15 : a < 14 ? 14 : a < 24 ? 12 : 4;
-      if (i % 3 === 0) s.micro(Math.round(x) - 6, Math.round(y) - 2, FIRE_WORDS[i % FIRE_WORDS.length], col);
-      else s.glow(Math.round(x), Math.round(y), 3 + Math.floor(a / 10), col, -1);
+      if (a < 0 || a > 34) continue;
+      const k = Math.min(1, a / 20);
+      const spread = (hash(i * 7) - 0.5) * 22 * k;
+      const x = mx + (fire.tx - mx) * k + spread * 0.6;
+      const y = my + (fire.ty - my) * k + (hash(i * 13) - 0.5) * 18 * k - Math.sin(k * Math.PI) * 8;
+      const col = a < 5 ? 15 : a < 12 ? 14 : a < 22 ? 12 : 4;
+      if (i % 4 === 0) s.micro(Math.round(x) - 8, Math.round(y) - 2, FIRE_WORDS[i % FIRE_WORDS.length], col);
+      else s.glow(Math.round(x), Math.round(y), 2 + Math.floor(a / 5), col, -1);
+    }
+    // the target is engulfed
+    if (age > 18) {
+      const k = Math.min(1, (age - 18) / 16);
+      for (let i = 0; i < 10; i++) {
+        const fx = fire.tx + (hash(i * 31 + Math.floor(t / 3)) - 0.5) * 22 * k;
+        const fy = fire.ty + 10 - hash(i * 17 + Math.floor(t / 4)) * 40 * k;
+        s.glow(Math.round(fx), Math.round(fy), 3 + Math.floor(k * 4), i % 3 ? 14 : 12, -1);
+      }
     }
   }
 }
@@ -364,15 +375,17 @@ async function breatheFire(g: Game, reason: 'gate' | 'attack') {
   await g.wait(500);
   fire = { t0: g.t, tx: p.x, ty: p.y - 18 };
   g.sfx('crash');
-  await g.wait(450);
+  await g.wait(650);
   g.flash(14, 120);
+  g.shake(300);
   g.sfx('zap');
   p.visible = false;
   const pile = new Actor('cardpile', 'Punch Cards', { stand: { frames: [] } }, p.x, p.y, 'down');
   pile.custom = (tt) => cardPileImg(tt);
   g.add(pile);
-  await g.wait(700);
+  await g.wait(500);
   fire = null;
+  await g.wait(400);
   glare = 0;
   dying = false;
   const why =
@@ -393,16 +406,16 @@ async function readToDragon(g: Game) {
   await g.say('You open the COBOL-85 Reference Manual, Volume 1 of 7, clear your throat, and begin to read aloud.');
   await g.talk(g.player, '"Chapter One. The IDENTIFICATION DIVISION. The IDENTIFICATION DIVISION must be the first division of every program. It identifies the program."');
   glare = 0;
-  await g.say("The dragon's head tilts. Its eyes narrow... and then, slowly, unfocus. Something in it recognizes the cadence. Its own documentation.", { title: 'Legacy Dragon' });
+  await g.say("The dragon's head tilts. Its eyes narrow... and then, slowly, unfocus. Something in it recognizes the cadence. Its own documentation.");
   drowsy = 1;
   await g.talk(g.player, '"The PROGRAM-ID paragraph is required. Its entry shall be a program-name, which is a user-defined word, subject to the following general rules, of which there are forty-one..."');
   drowsy = 2;
   yawn = 60;
   g.sfx('roar');
-  await g.say('The Legacy Dragon yawns enormously. A smoke ring the size of a tractor tire drifts lazily toward the stars.', { title: 'Legacy Dragon' });
+  await g.say('The Legacy Dragon yawns enormously. A smoke ring the size of a tractor tire drifts lazily toward the stars.');
   await g.talk(g.player, '"Chapter Two. The ENVIRONMENT DIVISION. The CONFIGURATION SECTION. The SOURCE-COMPUTER paragraph. The OBJECT-COMPUTER paragraph. The SPECIAL-NAMES paragraph, which may contain the following clauses..."');
   drowsy = 3;
-  await g.say("Its eyelids droop like a deprecated API. Its head sags lower, and lower...", { title: 'Legacy Dragon' });
+  await g.say("Its eyelids droop like a deprecated API. Its head sags lower, and lower...");
   await g.talk(g.player, '"...a level-88 condition-name entry may be specified with a VALUE clause, in which case..." Page three. You turn the page.');
   // the head comes down to rest on the ground
   g.set('dragon_asleep');
@@ -454,18 +467,22 @@ export const dragon: RoomDef = {
     glasses: ['glasses', 'reading glasses', 'spectacles', 'specs'],
     eyes: ['eyes', 'eye', 'dragon eye', 'dragon eyes'],
     smoke: ['smoke', 'nostril', 'nostrils', 'nose', 'snout'],
-    zzz: ['zzz', 'zs', 'z', 'snore', 'snoring'],
+    dhead: ['head', 'dragon head', 'jaw', 'jaws', 'teeth', 'fangs', 'mouth', 'skull plate', 'forehead'],
+    tail: ['tail', 'spade', 'tail tip'],
+    horns: ['horn', 'horns'],
+    claws: ['claw', 'claws', 'paw', 'paws', 'foot', 'feet', 'leg', 'legs', 'talons'],
+    zzz: ['zzz', 'snore', 'snoring', 'zzzz'],
   },
   hotspots: [
     {
-      id: 'castle',
-      nouns: ['castle', 'wall', 'walls', 'fortress', 'towers', 'tower', 'battlements', 'code', 'cobol code', 'stones', 'bricks'],
+      id: 'wall',
+      nouns: ['castle', 'walls', 'fortress', 'towers', 'tower', 'battlements', 'cobol code', 'stones', 'bricks'],
       area: [0, 0, 320, SEAM],
       look: "The castle is built entirely of COBOL: every stone a line of glowing green source code, stacked in courses like brick. MOVE WS-YY TO OUT-YY. PERFORM 1000-INIT. ADD 1 TO WS-COUNT. It's the payroll system. The castle IS the payroll system. Thirty-nine years of it.",
     },
     {
       id: 'moon',
-      nouns: ['moon', 'cursor', 'blinking cursor', 'block', 'sky', 'stars'],
+      nouns: ['moon', 'cursor', 'blinking cursor', 'block', 'stars'],
       area: [226, 8, 22, 26],
       look: 'A great green block cursor hangs in the sky where a moon should be, blinking patiently. Waiting for input. It has been waiting since 1987.',
     },
@@ -483,7 +500,7 @@ export const dragon: RoomDef = {
     },
     {
       id: 'gate',
-      nouns: ['gate', 'gateway', 'arch', 'archway', 'entrance', 'portcullis', 'door', 'passage'],
+      nouns: ['gate', 'gateway', 'arch', 'archway', 'entrance', 'portcullis', 'passage'],
       area: [GATE_X0 - 4, 60, GATE_X1 - GATE_X0 + 8, 54],
       at: [GATE_CX, 122],
       look: (g) =>
@@ -506,14 +523,14 @@ export const dragon: RoomDef = {
       look: 'A hand-painted sign: HERE BE LEGACY. The paint is old, the warning is older.',
     },
     {
-      id: 'scorch',
-      nouns: ['scorch', 'scorch marks', 'burns', 'burn marks', 'ground', 'flagstones', 'floor'],
+      id: 'floor',
+      nouns: ['scorch', 'scorch marks', 'burns', 'burn marks', 'flagstones'],
       area: [150, 116, 170, 74],
       look: "The flagstones are scorched in long, tidy streaks. The dragon's aim is excellent. It has had thirty-nine years of practice.",
     },
     {
       id: 'bridgeend',
-      nouns: ['bridge', 'node', 'head node', 'east', 'list'],
+      nouns: ['bridge', 'head node', 'list'],
       area: [300, 150, 20, 32],
       look: 'The HEAD node of the linked-list bridge, back across the Null Void to the east.',
     },
@@ -588,7 +605,7 @@ export const dragon: RoomDef = {
       const t = c.rest.toLowerCase();
       if (/hello world|identification division|cobol|move|perform|stop run|display/.test(t)) {
         glare = 60;
-        return void (await g.say("You attempt some COBOL. The dragon listens, then corrects your syntax in a voice like a dot-matrix printer: \"PERIOD MISSING. LINE 1. SEVERITY: FATAL.\"", { title: 'Legacy Dragon' }));
+        return void (await g.say("You attempt some COBOL. The dragon listens, then corrects your syntax in a voice like a dot-matrix printer: \"PERIOD MISSING. LINE 1. SEVERITY: FATAL.\""));
       }
       return false;
     },
@@ -604,12 +621,12 @@ export const dragon: RoomDef = {
       if (!c.noun || !g.has(c.noun)) return false;
       if (g.flag('dragon_asleep')) return void (await g.say("It's asleep. Don't push your luck."));
       glare = 90;
-      await g.say(`The dragon sniffs at the ${g.items[c.noun]?.name ?? c.noun}. "INVALID DATA TYPE," it rumbles. "EXPECTED: PIC X(80). RECEIVED: NONSENSE."`, { title: 'Legacy Dragon' });
+      await g.say(`The dragon sniffs at the ${g.items[c.noun]?.name ?? c.noun}. "INVALID DATA TYPE," it rumbles. "EXPECTED: PIC X(80). RECEIVED: NONSENSE."`);
     },
     'sing,sing ?': async (g) => {
       if (g.flag('dragon_asleep')) return void (await g.say('You hum very, very quietly. The dragon snores along, slightly off-key.'));
       glare = 90;
-      await g.say('You hum a lullaby. The dragon\'s eyes narrow. "SYNTAX ERROR," it rumbles. Whatever lulls a COBOL dragon to sleep, it isn\'t Brahms.', { title: 'Legacy Dragon' });
+      await g.say('You hum a lullaby. The dragon\'s eyes narrow. "SYNTAX ERROR," it rumbles. Whatever lulls a COBOL dragon to sleep, it isn\'t Brahms.');
     },
     'look scales': 'Each scale is a punch card: eighty columns, cream-colored, rectangular holes, top corner clipped. Some still carry faint print. You make out a payroll record from 1991. Somebody named Gary got a raise.',
     'take scales': async (g) => {
@@ -618,7 +635,15 @@ export const dragon: RoomDef = {
       await g.say("You pick up a shed card from the flagstones. It's a line of the payroll program: ADD OVERTIME-PAY TO GROSS-PAY. Someone's paycheck depends on it. You put it back exactly where you found it.");
     },
     'look belly': "The dragon's underside is a long fold of continuous green-bar printer paper, sprocket holes and all. If you squint you could probably read the 1987 payroll run off its belly.",
-    'look wings': 'Folded wings of tattered brown magnetic tape, stretched over long bones. When it breathes, they rustle like a reel-to-reel drive spooling up.',
+    'look wings': 'A great bat wing, half spread, its membrane made of tattered brown magnetic tape stretched between long bony fingers. When the dragon breathes, it rustles like a reel-to-reel drive spooling up.',
+    'look dhead': async (g) =>
+      void (await g.say(g.flag('dragon_asleep') ? 'Its great head rests on the flagstones, jaw slack, a contented curl of smoke rising from one nostril. Its forehead plate is a single enormous punch card.' : "A long, horned head with a jaw full of teeth like dot-matrix print heads. Its forehead plate is a single enormous punch card. Reading glasses ride low on its snout so it can glare at you over the top of them.")),
+    'look tail': 'A long tail of punch-card scales curls around the front of the coil and ends in a spade-shaped tip, like the corner of a very old floppy disk.',
+    'look horns': 'Two great swept-back horns, ridged and yellowed with age like a 1987 keyboard.',
+    'look claws': 'Claws like four letter openers. A dragon that runs payroll gets a lot of mail.',
+    'give dragon': "Give the dragon what? From the look of the courtyard, it mostly eats consultants.",
+    'search skeleton': "You pat down the consultant's remains, respectfully. In the blazer pocket: a business card. SYNERGY SOLUTIONS LLC: WE MODERNIZE LEGACY. Ah. You put it back.",
+    'take banner': 'It hangs from the top of the tower, well out of reach. Also, the COBOL guild would want it back.',
     'look glasses': async (g) =>
       void (await g.say(g.flag('dragon_asleep') ? 'Its reading glasses have slid down to the very end of its snout. It looks, frankly, adorable. Do not tell it that.' : "Half-moon reading glasses, perched on its snout. It squints at you over the top of them, the way a senior developer squints at a pull request with no tests.")),
     'take glasses': async (g) => void (await g.say(g.flag('dragon_asleep') ? "You consider borrowing its glasses. Its nostril twitches. You reconsider." : "You'd have to get within arm's length of its mouth. That is not a length you want to get within.")),
@@ -630,7 +655,7 @@ export const dragon: RoomDef = {
       await g.say('You are not that hungry, and that is somebody\'s payroll.');
     },
     // ---------------------------------------------------------------- the gate
-    'enter|go gate,go north,enter castle,go castle': async (g) => {
+    'enter|go gate|wall,go north': async (g) => {
       if (g.flag('dragon_asleep')) {
         await g.walk(null, GATE_CX, 111);
         return;
@@ -638,7 +663,13 @@ export const dragon: RoomDef = {
       await g.walk(null, GATE_CX, 120);
     },
     'open|close gate': 'The gate is already open. Getting through it is the hard part.',
-    'read castle|gate|inscription': async (g) => {
+    'look sky': 'A great green block cursor hangs where the moon should be, blinking patiently over the castle. A few dim green stars. It is always midnight here, and always waiting for input.',
+    'look door,open|close door': 'The castle\'s gate stands open under the PROCEDURE DIVISION inscription. Getting through it is the hard part.',
+    'enter|go door': async (g) => {
+      await g.walk(null, GATE_CX, g.flag('dragon_asleep') ? 111 : 120);
+    },
+    'look|read code': 'The castle is built entirely of COBOL: every stone a line of glowing green source code. MOVE WS-YY TO OUT-YY. PERFORM 1000-INIT. IF WS-YY > 99. It is the payroll system. The castle IS the payroll system.',
+    'read wall|gate|inscription': async (g) => {
       await g.say("You read a stretch of wall:\n\nIF WS-YY > 99\n    GO TO 9999-EXIT.\nMOVE WS-YY TO OUT-YY.\nPERFORM 1000-INIT.\n\nTwo-digit years. Hm. You file that away.");
     },
     'take skeleton|deck|slides': "You leave the consultant's slide deck where it lies. Some roadmaps are best left un-followed.",

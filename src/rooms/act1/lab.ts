@@ -6,7 +6,7 @@ import type { Game } from '../../engine/game';
 import { Surface, rng } from '../../engine/raster';
 import { dith } from '../../engine/palette';
 import { fluorescent, keyboard, whiteboard } from '../../art/lib';
-import { shadow } from '../../art/office_props';
+import { shadow, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 import { HALL_ARRIVE } from './hallway';
@@ -492,6 +492,7 @@ export const lab: RoomDef = {
       s.plot(STAND.x + 13, STAND.z - 4, Math.floor(t / 30) % 2 ? 11 : 9);
     }
   },
+  nouns: { ...BASE_NOUNS, ...itemNouns(['powerbank', 'phone', 'esckey', 'candy', 'coffee', 'duck', 'keycard', 'badge']), ...COMPUTER_NOUNS },
   verbs: {
     'look krishna': async (g) =>
       g.say(
@@ -618,6 +619,8 @@ export const lab: RoomDef = {
       await g.approach('printer');
       await g.say("The 3D printer is busy printing a tiny rubber duck. Forty percent done. You don't want to interrupt it. Interrupted 3D prints become modern art.");
     },
+    'look light': "The overhead lights are dark; the lab runs on the glow of monitors, the oscilloscope, and whatever the helmet is doing. Every few seconds, it sparks, and the whole room flickers like a thunderstorm in a very small box.",
+    'look computer': async (g) => g.say(lab.hotspots!.find((h) => h.id === 'laptop')!.look as string),
     'use|type laptop,use computer,type,type ?': async (g) => {
       await g.approach('laptop');
       await krishnaStops(g, "Please don't touch the laptop! It's calibrating the debugging cortex. If you open a browser tab right now, Adriana might start dreaming about cookie banners.");

@@ -6,7 +6,7 @@ import type { Command } from '../../engine/parser';
 import { Surface, microWidth } from '../../engine/raster';
 import { dith } from '../../engine/palette';
 import { skyline, fluorescent, door as libDoor } from '../../art/lib';
-import { ceilingBand, lerpY, quad, exitSign, tallPlant, plaque } from '../../art/office_props';
+import { ceilingBand, lerpY, quad, exitSign, tallPlant, plaque, BASE_NOUNS, itemNouns } from '../../art/office_props';
 import { award } from '../../content/points';
 
 const SEAM = 108;
@@ -115,11 +115,16 @@ function paint(p: Surface, g: Game) {
 
   // ---------------------------------------------------------------- doors
   // Break room: propped open, warm kitchen light inside
-  libDoor(p, BREAK.x, DOOR_TOP, BREAK.w, 46, { color: 6, open: true, inside: 14 });
-  p.rect(BREAK.x + 6, DOOR_TOP + 4, BREAK.w - 8, 18, 14);
-  p.rect(BREAK.x + 6, DOOR_TOP + 22, BREAK.w - 8, 20, dith(14, 6, 6));
-  p.rect(BREAK.x + 9, DOOR_TOP + 24, 8, 6, 15); // a glimpse of the fridge
-  p.rect(BREAK.x + 6, DOOR_TOP + 40, BREAK.w - 6, 6, 6);
+  libDoor(p, BREAK.x, DOOR_TOP, BREAK.w, 46, { color: 6, open: true, inside: 11 });
+  // a glimpse of the break room: mint walls, the wood counter, the checkered floor
+  p.rect(BREAK.x + 5, DOOR_TOP + 26, BREAK.w - 5, 12, 6);
+  p.hline(BREAK.x + 5, BREAK.x + BREAK.w - 1, DOOR_TOP + 26, 14);
+  p.rect(BREAK.x + 5, DOOR_TOP + 22, BREAK.w - 5, 4, 15);
+  p.rect(BREAK.x + 12, DOOR_TOP + 16, 6, 6, 7); // the SmartBrew
+  p.rect(BREAK.x + 13, DOOR_TOP + 17, 4, 2, 12);
+  p.rect(BREAK.x + 5, DOOR_TOP + 38, BREAK.w - 5, 8, 7);
+  for (let k = 0; k < 4; k++) p.rect(BREAK.x + 5 + k * 5, DOOR_TOP + 38 + (k & 1) * 4, 5, 4, 15);
+  p.rect(BREAK.x + 5, DOOR_TOP + 38, BREAK.w - 5, 1, 8);
   p.rect(BREAK.x + 2, SEAM - 4, 4, 3, 8); // doorstop
   signAbove(p, BREAK.x + BREAK.w / 2, DOOR_TOP - 12, 'BREAK ROOM', 15, 0);
 
@@ -262,7 +267,12 @@ function nearestDoor(g: Game): DoorId {
 function whichReader(g: Game, card: string | null): 'labreader' | 'stairreader' {
   const dl = Math.abs(g.player.x - LAB_READER.x);
   const ds = Math.abs(g.player.x - STAIR_READER.x);
-  if (g.player.y < 135 && Math.min(dl, ds) < 22) return dl < ds ? 'labreader' : 'stairreader';
+  if (g.player.y < 135 && Math.min(dl, ds) < 22) {
+    const near = dl < ds ? 'labreader' : 'stairreader';
+    // the keycard at an already-open lab reader probably means the stairwell
+    if (near === 'labreader' && card === 'keycard' && g.flag('lab_open') && !g.flag('stairs_open')) return 'stairreader';
+    return near;
+  }
   if (card === 'keycard') return g.flag('stairs_open') && !g.flag('lab_open') ? 'labreader' : 'stairreader';
   return 'labreader';
 }
@@ -520,10 +530,10 @@ export const hallway: RoomDef = {
     },
     {
       id: 'exitsign',
-      nouns: ['exit sign', 'green sign'],
+      nouns: ['exit sign', 'green sign', 'strobe', 'emergency light', 'beacon', 'emergency strobe'],
       area: [STAIR.x + 3, 27, 22, 11],
       at: [STAIR.x + 13, 118],
-      look: 'A glowing EXIT sign above the stairwell. Under lockdown, it is more of a suggestion than a promise.',
+      look: 'A glowing EXIT sign above the stairwell, and above that an emergency strobe that flashes every couple of seconds, just in case anyone had forgotten that this is an emergency. Under lockdown, the EXIT sign is more of a suggestion than a promise.',
     },
   ],
   exits: [
@@ -544,6 +554,10 @@ export const hallway: RoomDef = {
     },
   ],
   nouns: {
+    ...BASE_NOUNS,
+    ...itemNouns(['badge', 'keycard']),
+    bathroom: ['bathroom', 'executive bathroom', 'restroom', 'toilet', 'washroom', 'mens room', 'ladies room'],
+    sign: ['sign', 'signs', 'door signs'],
     reader: ['reader', 'readers', 'badge reader', 'card reader', 'scanner', 'card scanner', 'badge scanner', 'access reader'],
     card: ['card'],
   },
@@ -596,6 +610,8 @@ export const hallway: RoomDef = {
       }
       await swipe(g, card, rdr);
     },
+    'look sign,read sign': 'Signs, signs, everywhere signs: BREAK ROOM, NOC, R&D LAB, STAIRS, EXIT, "< OFFICE," and two hand-lettered OUT OF ORDER signs taped to the elevators. The lobby is extremely well documented. If only the Monolith were.',
+    'look light': "The ceiling lights are dark; everything's on emergency power. The only light comes from the windows, the EXIT sign, and a strobe over the stairwell that flashes like it's being paid by the flash.",
     'look reader': async (g) => {
       const r = whichReader(g, whichCard(g));
       const hs = hallway.hotspots!.find((h) => h.id === r)!;
@@ -670,7 +686,8 @@ export const hallway: RoomDef = {
     'take logo,attack logo': 'It is inlaid in marble. Phil polished it personally. You leave it alone.',
     'take notice,take exitsign': 'Facilities would be very upset. Facilities is already very upset.',
     'look/through window,open window': 'The window is sealed, and the view is all sunset and traffic. Everyone else is going home.',
-    'go officeway': async (g) => {
+    'look bathroom,go|enter|use|open bathroom,use keycard bathroom': "The restrooms are around the corner, and they're on the Monolith's lock system too. As for the executive bathroom: Phil asked you very nicely not to. You are a man of your word. For now.",
+    'go officeway,go|enter office': async (g) => {
       await g.walk(null, 3, 150);
       g.goto('office', [302, 160, 'left']);
     },

@@ -6,7 +6,7 @@ import type { Actor } from '../../engine/actor';
 import { Surface, rng } from '../../engine/raster';
 import { dith } from '../../engine/palette';
 import { skyline, fluorescent } from '../../art/lib';
-import { ceilingBand, sideWallL, sideWallR, lerpY, quad, frontDesk, plaque, shadow } from '../../art/office_props';
+import { ceilingBand, sideWallL, sideWallR, lerpY, quad, frontDesk, plaque, shadow, BASE_NOUNS, itemNouns } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 
@@ -414,7 +414,7 @@ export const phil: RoomDef = {
     },
     {
       id: 'credenza',
-      nouns: ['credenza', 'cabinet', 'trophies', 'golf trophies', 'cabinets'],
+      nouns: ['credenza', 'cabinet', 'trophies', 'golf trophies', 'cabinets', 'trophy', 'tv'],
       area: [38, 80, 154, 28],
       at: [110, 116],
       look: 'A walnut credenza crowded with little golf trophies. CLUB CHAMPION 2003. MOST IMPROVED 2004. HONORABLE MENTION 2005. PARTICIPANT 2006 through 2025.',
@@ -482,6 +482,12 @@ export const phil: RoomDef = {
     }
     return false;
   },
+  nouns: {
+    ...BASE_NOUNS,
+    ...itemNouns(['report', 'keycard', 'candy', 'coffee', 'duck', 'badge', 'mug']),
+    plane: ['plane', 'airplane', 'jet', 'aircraft'],
+    bathroom: ['bathroom', 'executive bathroom', 'restroom', 'toilet', 'washroom', 'bathroom door'],
+  },
   verbs: {
     'look phil': async (g) =>
       g.say(
@@ -489,7 +495,21 @@ export const phil: RoomDef = {
           g.flag('phil_gave_keycard') ? 'He looks a little lighter now that someone else is holding the keycard.' : 'He keeps glancing at the golf putter like it might offer some advice.'
         }`,
       ),
-    'talk phil,ask phil ?,tell phil ?,say phil,hello phil': async (g) => {
+    'talk phil,ask phil ?,tell phil ?,say phil,hello phil': async (g, c) => {
+      const topics: Record<string, string> = {
+        denis: "Denis and I started this company in a garage in 1987. He wrote every line of the Monolith. I wrote the business plan on a napkin. His part turned out to be harder. He's lived down in that basement since '99. I keep telling him to take a vacation. He keeps telling me the Monolith would get lonely.",
+        photo: "Day one. Denis and me, and the Monolith, the day we turned her on. We said we'd fix the date handling 'before it matters.' I'm sure we did. Didn't we?",
+        aidan: "Poor kid. Don't tell him I said this, but he followed the runbook perfectly. I wrote that runbook. In 1999. Maybe I should update the runbook.",
+        fahim: "Fahim is the best SRE I've ever had. He writes beautiful incident reports. I have them framed. Well. Laminated.",
+        krishna: "Krishna's building a helmet that lets you debug from the inside. Legal says it's fine as long as nobody uses it. So please don't tell Legal.",
+        adriana: "Adriana went down to the basement to look into a date bug hours ago. I'm sure she's fine. She's the smartest person in the building. Present company... included, mostly.",
+        mike: "Mike sold Quantum Sync to the investors. I don't know what Quantum Sync is. Neither does Mike. It's on the roadmap now.",
+        nicholas: "Nicholas? Lovely kid. Has he centered that thing yet? The... the box? He's been at it since Tuesday.",
+        green: "Golf teaches patience, Dominic. Patience, focus, and how to lose gracefully. Mostly the last one.",
+      };
+      const topic = c.noun2 && topics[c.noun2] ? c.noun2 : c.verb === 'ask' && /monolith/.test(c.raw.toLowerCase()) ? 'monolith' : '';
+      if (topic === 'monolith') return void (await philTalk(g, [['phil', "The Monolith has run this company since 1987. Payroll, billing, the doors, the elevators, the coffee machine, the parking gate. Every time someone suggested replacing it, the estimate came back bigger than the company. So we... didn't."]]));
+      if (topic) return void (await philTalk(g, [['phil', topics[topic]]]));
       if (g.flag('phil_gave_keycard')) return void (await philTalk(g, [['phil', cycle(g, 'phil_after_i', PHIL_AFTER)]]));
       if (!g.flag('phil_talked')) {
         g.set('phil_talked');
@@ -569,6 +589,21 @@ export const phil: RoomDef = {
       if (!g.actor('phil')) return false;
       await philStops(g, "Language, Dominic! (he pulls out his wallet and stuffs a dollar into the jar on your behalf) I'll put it on your tab.");
     },
+    'read desk,read rules,look rules,open rules,read binder': 'The binder is labeled RULES (VOL. 12). You flip to a random page: "Section 4.2: Basement access during a lockdown requires an incident report filed by the on-call SRE. Section 4.3: See section 4.2." Phil is nothing if not consistent.',
+    'look/under desk,search desk,open desk': async (g) => {
+      await g.approach('desk');
+      await philStops(g, "Please don't rummage in my desk. There's nothing exciting in there anyway. Golf tees, antacids, and the business plan for this company, written on a napkin.");
+    },
+    'open|search credenza,look/in credenza': async (g) => {
+      await g.approach('credenza');
+      await g.say('You peek inside the credenza: four hundred golf balls, a framed scorecard from 2003, and a box of BREAK! bars labeled EMERGENCY. It is empty. Phil had an emergency.');
+    },
+    'take credenza': async (g) => {
+      await g.approach('credenza');
+      await philStops(g, "Those trophies are sentimental, Dominic. 'Participant, 2014.' Do you know how hard I worked to participate in 2014?");
+    },
+    'look light': "The overhead lights are out, like everywhere else in the building. Phil's office doesn't need them: the sunset is doing all the work, and the work is magnificent.",
+    'look plane': 'A tiny plane crawls across the sunset. Somebody is leaving town for the weekend. Lucky them.',
     'read photo': async (g) => g.say('A brass plate under the photo reads: "MONOLITH SYSTEMS, 1987. Day one. We\'ll fix the dates later. -D"'),
     'take photo': async (g) => {
       await g.approach('photo');
@@ -590,10 +625,13 @@ export const phil: RoomDef = {
       await philStops(g, "My desk drawers are for CEO eyes only. There's nothing exciting in there, anyway. Golf tees and antacids.");
     },
     'turnon|turnoff|use lamp': 'You click the lamp. Nothing. The building is on emergency power, and banker\'s lamps are apparently not an emergency.',
-    'take lamp,take desk,take chair,take credenza,take bookshelf': "It's executive furniture. It was built to stay exactly where it is, forever, like Phil's quarterly targets.",
+    'take lamp,take desk,take chair,take bookshelf': "It's executive furniture. It was built to stay exactly where it is, forever, like Phil's quarterly targets.",
     'take|use desk phone,call ?': async (g, c) => {
       if (c.verb === 'call' && c.noun) return false;
       await philStops(g, "I've got the handset, Dominic. I've had it for two hours. Mr. Henderson is very... thorough.");
+    },
+    'look bathroom,go|enter|use|open bathroom': async (g) => {
+      await philStops(g, g.has('keycard') ? "Dominic. I saw you look at that door. Please don't use the executive bathroom. It has a heated seat and I would like it to stay MY heated seat." : "That's the executive bathroom. It's for executives. You'd need a master keycard. Which you don't have. Which is the point.");
     },
     'look/through window': 'The sun is going down behind the city. The view from up here is incredible. So is the outage.',
     'open|close window,break window': "These windows don't open. Phil had them sealed after a regrettable incident involving a golf ball and the parking lot.",

@@ -6,6 +6,7 @@ import type { Game } from '../../engine/game';
 import type { Dir } from '../../engine/actor';
 import { Surface, rng } from '../../engine/raster';
 import { bayerAt } from '../../engine/palette';
+import { halo } from '../../art/creatures_c';
 import { twinkle, sevenSeg, sevenSegWidth, commas, microOutlined, microCentered, textOutlined, CYBER_VERBS } from '../../art/cyber_c_kit';
 import { award } from '../../content/points';
 
@@ -50,33 +51,35 @@ function starTrails(p: Surface) {
 }
 
 function arenaFloor(p: Surface) {
-  // the arena floor: concentric rings and radial spokes (a polar grid)
-  for (let y = HZ + 1; y < 190; y++) {
+  p.rect(0, HZ + 1, 320, 190 - HZ - 1, 0);
+  // the field inside the track: a dark disc with a faint sheen
+  p.ellipse(CX, CY, Math.round(ARX * 0.86), Math.round(ARY * 0.86), 0);
+  // radial spokes
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    p.line(CX + Math.cos(a) * ARX * 0.12, CY + Math.sin(a) * ARY * 0.12, CX + Math.cos(a) * ARX * 0.86, CY + Math.sin(a) * ARY * 0.86, 5);
+  }
+  // concentric rings, like a target
+  for (let k = 1; k <= 6; k++) {
+    const f = k / 7;
+    p.ellipseO(CX, CY, Math.round(ARX * f), Math.round(ARY * f), k % 2 ? 5 : 13);
+  }
+  p.ellipse(CX, CY, 6, 2, 13);
+  p.ellipse(CX, CY, 3, 1, 15);
+  // the track: a band between the field and the rim
+  for (let y = HZ + 1; y < 190; y++)
     for (let x = 0; x < 320; x++) {
       const dx = (x - CX) / ARX,
         dy = (y - CY) / ARY;
-      const d = Math.sqrt(dx * dx + dy * dy);
-      let c = 0;
-      if (d > 1.0) {
-        // outside the rim: dark ground fading to the horizon
-        c = bayerAt(x, y) < 2 ? 5 : 0;
-      } else {
-        const ring = d * 7;
-        const fr = ring - Math.floor(ring);
-        const ang = Math.atan2(dy, dx);
-        const spoke = ((ang / (Math.PI * 2)) * 24 + 48) % 1;
-        const near = y > 140;
-        if (fr < 0.07 + (near ? 0.03 : 0)) c = Math.floor(ring) % 2 ? 5 : 13;
-        else if (spoke < 0.03 / Math.max(0.25, d)) c = 5;
-      }
-      p.plot(x, y, c);
+      const d = dx * dx + dy * dy;
+      if (d > 0.86 * 0.86 && d <= 1) p.plot(x, y, bayerAt(x, y) < 3 ? 1 : 0);
     }
-  }
   // the track: a bright ring around the field
   for (const [k, c] of [
     [1.0, 13],
     [0.985, 5],
-    [0.86, 5],
+    [0.86, 13],
+    [0.85, 5],
   ] as [number, number][])
     p.ellipseO(CX, CY, Math.round(ARX * k), Math.round(ARY * k), c);
   // arrows painted on the track, all pointing the same way round. Forever.
@@ -94,7 +97,6 @@ function arenaFloor(p: Surface) {
   }
   // horizon
   p.hline(0, 319, HZ, 13);
-  p.hline(0, 319, HZ + 1, 5);
 }
 
 const ARCH = { l: 116, r: 204, top: 40, base: 114, pw: 12 };
@@ -152,40 +154,57 @@ function arch(p: Surface, g: Game) {
         const x = 104 + i * 10 + Math.floor(rr() * 4),
           y = 118 + Math.floor(rr() * 6);
         if (x > 146 && x < 172) continue;
-        textOutlined(p, x, y - 8, letters[i], 6, 0);
+        textOutlined(p, x, y - 8, letters[i], 14, 0);
       }
     });
-    // beyond: a corridor leading north to a distant red glow
-    for (let y = 56; y < HZ; y++) {
-      const d = (y - 56) / (HZ - 56);
-      const hw = 3 + d * 12;
-      for (let x = Math.round(CX - hw); x <= Math.round(CX + hw); x++) {
-        const edge = Math.abs(x - CX) > hw - 1;
-        if (edge) p.plot(x, y, 4);
-        else if (bayerAt(x, y) < 3 + d * 3) p.plot(x, y, 4);
-      }
+    // beyond: a path north to a distant red-lit chamber on the horizon
+    for (let y = HZ + 1; y < 114; y++) {
+      const d = (y - HZ) / 14;
+      const hw = 3 + d * 9;
+      p.hline(Math.round(CX - hw), Math.round(CX + hw), y, 0);
+      p.plot(Math.round(CX - hw), y, 4);
+      p.plot(Math.round(CX + hw), y, 4);
     }
-    // the far-off cage of the Deadlock
-    p.rect(CX - 5, 48, 11, 10, 0);
-    p.frame(CX - 5, 48, 11, 10, 12);
-    for (let x = CX - 3; x <= CX + 3; x += 2) p.vline(x, 49, 56, 4);
-    p.hline(CX - 7, CX + 7, 47, 12);
+    halo(p, CX, HZ - 10, 30, 14, 4, 6);
+    p.rect(CX - 16, HZ - 20, 33, 20, 0);
+    p.frame(CX - 16, HZ - 20, 33, 20, 4);
+    p.poly([CX - 19, HZ - 20, CX + 19, HZ - 20, CX + 13, HZ - 26, CX - 13, HZ - 26], 4);
+    p.lines([CX - 19, HZ - 20, CX - 13, HZ - 26, CX + 13, HZ - 26, CX + 19, HZ - 20], 12);
+    // its glowing doorway, and a cage inside
+    p.rect(CX - 6, HZ - 14, 13, 14, 4);
+    for (let x = CX - 4; x <= CX + 4; x += 2) p.vline(x, HZ - 12, HZ - 1, 12);
+    p.hline(CX - 5, CX + 5, HZ - 13, 12);
+    p.plot(CX, HZ - 7, 13);
   }
 }
 
 function brace(p: Surface) {
   // a giant closing brace monument on the east side of the arena
-  const x = 268,
-    base = 130;
+  const x = 272,
+    base = 130,
+    top = base - 70,
+    mid = base - 38;
+  // build the "}" outline from smooth pieces
+  const pts: number[] = [];
+  const arc = (cx: number, cy: number, r: number, a0: number, a1: number) => {
+    for (let i = 0; i <= 8; i++) {
+      const a = a0 + ((a1 - a0) * i) / 8;
+      pts.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    }
+  };
+  arc(x - 6, top + 6, 6, -Math.PI / 2, 0); // top hook
+  pts.push(x, mid - 7);
+  arc(x + 6, mid - 6, 6, Math.PI, Math.PI / 2 + 0.2); // curl out to the point
+  arc(x + 6, mid + 6, 6, -Math.PI / 2 - 0.2, -Math.PI); // and back in
+  pts.push(x, base - 18);
+  arc(x - 6, base - 18, 6, 0, Math.PI / 2); // bottom hook
   p.at(base, () => {
-    p.ellipse(x + 6, base - 1, 16, 3, 0);
-    p.rect(x - 8, base - 6, 30, 6, 5);
-    p.hline(x - 8, x + 21, base - 6, 13);
-    // the brace itself, drawn thick
-    const pts = [x - 2, base - 66, x + 6, base - 62, x + 7, base - 46, x + 14, base - 38, x + 7, base - 30, x + 6, base - 14, x - 2, base - 8];
-    p.lines(pts, 0, 6);
-    p.lines(pts, 5, 4);
-    p.lines(pts, 13, 2);
+    p.ellipse(x, base - 1, 18, 3, 0);
+    p.rect(x - 14, base - 6, 26, 6, 1);
+    p.hline(x - 14, x + 11, base - 6, 13);
+    p.lines(pts.map((v, i) => (i % 2 ? v + 1 : v + 1)), 0, 6);
+    p.lines(pts, 5, 5);
+    p.lines(pts, 13, 3);
     p.lines(pts.map((v, i) => (i % 2 ? v : v - 1)), 15);
   });
 }
@@ -378,8 +397,9 @@ async function duckNudge(g: Game, strong: boolean) {
     award(g, 'duck_talked');
     await g.say('Something in your pocket clears its throat.\n\nYou pull out your rubber duck. It is looking at you. It BLINKS.\n\n"Dominic. Buddy. Twenty years I\'ve listened to you mumble about null pointers, and in here I can finally talk BACK."', { title: 'Rubber Duck' });
   }
-  if (!strong) await g.say('"Quack. You do realise we\'ve been here before? Five times. LITERALLY. Every loop needs an exit condition, and this one doesn\'t have one. You know the keyword. Or you could just... escape."', { title: 'Rubber Duck' });
-  else await g.say('"QUACK. Iteration twelve. I am begging you. Type BREAK. Or press that ESC key you pried off Nicholas\'s keyboard. Anything. I am a duck, and even I am dizzy."', { title: 'Rubber Duck' });
+  if (!strong) await g.say('"Quack. You do realise we\'ve been here before? Several times. LITERALLY. Every loop needs an exit condition, and this one doesn\'t have one. You know the keyword. Or you could just... escape."', { title: 'Rubber Duck' });
+  else
+    await g.say(`"QUACK. Still here. Still going round. I am begging you. Type BREAK.${g.has('esckey') ? " Or press that ESC key you pried off Nicholas's keyboard." : ' Or ESCAPE. Or CTRL-C.'} Anything. I am a duck, and even I am dizzy."`, { title: 'Rubber Duck' });
 }
 
 function wrapExit(area: number[], dir: string, x: number, face: Dir) {
@@ -423,7 +443,7 @@ export const loop: RoomDef = {
     { id: 'sky', nouns: ['sky', 'stars', 'star trails', 'trails', 'circles'], area: [0, 0, 320, 60], look: 'The stars wheel slowly around a single point, leaving circular trails across the sky. Even the heavens in here are stuck in a loop.' },
     {
       id: 'counter',
-      nouns: ['counter', 'iteration', 'iterations', 'number', 'display', 'progress bar', 'spinner', 'loop count', 'loop counter'],
+      nouns: ['counter', 'iteration', 'iterations', 'number', 'progress bar', 'spinner', 'loop count', 'loop counter'],
       area: [106, 0, 108, 34],
       look: (g) =>
         g.flag('loop_broken')
@@ -440,7 +460,7 @@ export const loop: RoomDef = {
           ? 'The arch has collapsed into rubble, the letters of "while (true) {" scattered across the floor. Through the gap, a corridor leads north toward a distant red glow, and something that looks like a cage.'
           : 'A great arch inscribed in glowing letters: "while (true) {". Between its pillars a force field shimmers. Walk through it and you will simply come around again. The condition is always true. That is rather the point.',
     },
-    { id: 'brace', nouns: ['brace', 'closing brace', 'curly brace', 'bracket', 'monument', 'statue'], area: [252, 60, 44, 72], look: 'A giant closing brace "}" stands on the east side of the arena, marking the end of the loop body. You reach the end of the loop, and you go back to the start. That is what the brace means.' },
+    { id: 'brace', nouns: ['brace', 'closing brace', 'curly brace', 'bracket', 'monument', 'statue'], area: [254, 54, 40, 78], look: 'A giant closing brace "}" stands on the east side of the arena, marking the end of the loop body. You reach the end of the loop, and you go back to the start. That is what the brace means.' },
     { id: 'pedestal', nouns: ['pedestal', 'wheel', 'loading wheel', 'please wait', 'wait sign', 'spinning wheel', 'loading'], area: [26, 80, 40, 52], look: 'A pedestal marked WAIT...., topped with a spinning "please wait" wheel. It has been spinning since 1987. It will not stop until the loop does.' },
   ],
   exits: [
@@ -454,6 +474,7 @@ export const loop: RoomDef = {
   ],
   nouns: {
     loop: ['loop', 'infinite loop', 'while loop', 'cycle'],
+    cage: ['cage', 'chamber', 'corridor', 'red glow', 'glow', 'deadlock'],
   },
   verbs: {
     'break,break loop|arch|counter|room|everything|floor|self': async (g) => {
@@ -474,6 +495,18 @@ export const loop: RoomDef = {
         const out = await r(g);
         if (typeof out === 'string') await g.say(out);
       }
+    },
+    'go floor,go': async (g) => {
+      if (g.flag('loop_broken')) return void (await g.say('You jog a lap of the arena, purely recreationally. Without the loop, it is just exercise.'));
+      g.inc('loop_count');
+      rollT = 40;
+      await g.say(`You follow the arrows round the track, once, all the way. You end up exactly where you started. The counter ticks over to ${commas(iter(g))}.`);
+    },
+    'listen ?,listen': 'A steady hum, rising and falling, rising and falling, rising and falling. You catch yourself humming along. You stop. It does not.',
+    'smell ?,smell': 'Ozone, and the faint smell of something that has been running much, much too long.',
+    'look cage': async (g) => {
+      if (!g.flag('loop_broken')) return void (await g.say('Through the shimmering force field you can just make out something red, far to the north. The field makes it impossible to see more.'));
+      await g.say('Far to the north, at the end of the path, squats a dull red chamber. Through its doorway you can see the bars of a cage.');
     },
     'take brace,push brace': "The closing brace is enormous and very firmly closed. Pushing it would only start the loop over. You suspect it's done that before.",
     'take counter,turnoff|reboot counter': "It's up in the sky, counting. You'd need a much longer arm, or a break statement.",
@@ -546,10 +579,12 @@ export const loop: RoomDef = {
     const n = g.flag('loop_count') ?? 0;
     if (n === 1) {
       await g.say(`You walk out of the arena... and walk straight back into it, from the other side. Overhead, the counter ticks over: ITERATION ${commas(iter(g))}.\n\nHm.`);
-    } else if (n === 5) {
-      await duckNudge(g, false);
-    } else if (n === 12) {
+    } else if (n >= 12 && !g.flag('loop_duck2') && g.has('duck')) {
+      g.set('loop_duck2');
       await duckNudge(g, true);
+    } else if (n >= 5 && !g.flag('loop_duck1') && g.has('duck')) {
+      g.set('loop_duck1');
+      await duckNudge(g, false);
     }
   },
   tick,

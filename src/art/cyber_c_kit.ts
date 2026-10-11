@@ -148,7 +148,7 @@ function particles(seed: number, n: number, w: number, h: number, colors: number
 }
 
 /** Binary digits drifting upward through a region, flickering as they go. */
-export function driftBits(s: Surface, t: number, x: number, y: number, w: number, h: number, seed = 1, n = 14, colors = [3, 9, 11], dir = -1) {
+export function driftBits(s: Surface, t: number, x: number, y: number, w: number, h: number, seed = 1, n = 14, colors = [3, 9, 11], dir = -1, ok?: (x: number, y: number) => boolean) {
   for (const p of particles(seed, n, w, h, colors)) {
     const travel = (t * p.v + p.ph) % (h + 6);
     const yy = dir < 0 ? y + h - travel : y - 6 + travel;
@@ -156,7 +156,9 @@ export function driftBits(s: Surface, t: number, x: number, y: number, w: number
     const fade = travel / (h + 6);
     if (fade > 0.85 && ((t >> 2) & 1)) continue;
     const ch = ((t + p.ph) / 50) % 2 < 1 ? p.ch : p.ch === '0' ? '1' : '0';
-    s.micro(xx, Math.round(yy), ch, fade > 0.6 ? 1 : p.c);
+    const Y = Math.round(yy);
+    if (ok && !(ok(xx, Y) && ok(xx + 2, Y) && ok(xx, Y + 4) && ok(xx + 2, Y + 4))) continue;
+    s.micro(xx, Y, ch, fade > 0.6 ? 1 : p.c);
   }
 }
 

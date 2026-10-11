@@ -12,7 +12,7 @@ const SEAM = 118; // wall/floor seam
 const WB = 122; // back edge of the walkable floor
 const DOOR = { x: 248, y: 64, w: 32, h: 54 }; // the server room door
 const PANEL = { x: 88, y: 72, w: 22, h: 27 };
-const PUDDLE = [150, 120, 172, 118, 198, 121, 222, 119, 234, 126, 238, 142, 236, 158, 242, 172, 238, 190, 148, 190, 144, 176, 150, 158, 144, 140, 148, 128];
+const PUDDLE = [156, 119, 170, 118, 184, 120, 200, 118, 218, 119, 230, 123, 236, 131, 233, 140, 240, 150, 246, 162, 242, 172, 250, 182, 248, 190, 142, 190, 136, 182, 142, 172, 138, 162, 146, 151, 142, 140, 150, 131, 148, 124];
 const CABLE_END: [number, number] = [190, 140];
 
 // transient state (not saved): the eye-slot is open after a knock
@@ -31,7 +31,7 @@ function paint(p: Surface, g: Game) {
   p.hline(0, 319, SEAM - 22, 14);
   p.hline(0, 319, SEAM - 23, 6);
   // the wall is lit in a soft pool below the fluorescent tube
-  litPool(p, 117, 36, 70, 62);
+  litPool(p, 117, 40, 62, 54);
   p.rect(0, 0, 320, 6, 0);
 
   // ---- ceiling pipes
@@ -183,9 +183,11 @@ function paint(p: Surface, g: Game) {
     p.micro(Dr.x + 4, Dr.y + 32, 'SERVER', 0);
     p.micro(Dr.x + 8, Dr.y + 38, 'ROOM', 0);
     // eye-slot (closed)
-    p.rect(Dr.x + 10, Dr.y + 15, 12, 5, 8);
-    p.frame(Dr.x + 10, Dr.y + 15, 12, 5, 0);
-    p.hline(Dr.x + 11, Dr.x + 20, Dr.y + 17, 0);
+    p.rect(Dr.x + 8, Dr.y + 13, 16, 8, 8);
+    p.frame(Dr.x + 8, Dr.y + 13, 16, 8, 0);
+    p.rect(Dr.x + 10, Dr.y + 15, 12, 4, 7);
+    p.hline(Dr.x + 10, Dr.x + 21, Dr.y + 15, 15);
+    p.rect(Dr.x + 14, Dr.y + 16, 4, 2, 8);
     // heavy hinges
     p.rect(Dr.x - 1, Dr.y + 8, 3, 6, 8);
     p.rect(Dr.x - 1, Dr.y + 40, 3, 6, 8);
@@ -207,10 +209,10 @@ function paint(p: Surface, g: Game) {
 
   // ---- floor: cold concrete, darker toward the wall
   p.rect(0, SEAM, 320, 190 - SEAM, 7);
-  p.gradV(0, SEAM, 320, 22, [8, 7]);
+  p.gradV(0, SEAM, 320, 10, [8, 7]);
   p.poly([0, SEAM + 24, 24, SEAM, 0, SEAM], 8);
   p.hline(0, 319, SEAM, 0);
-  p.speckle(0, SEAM + 6, 320, 190 - SEAM - 6, 8, 0.03, 41);
+  p.speckle(0, SEAM + 14, 320, 190 - SEAM - 14, 8, 0.012, 41);
   // expansion joints
   for (let i = -6; i <= 6; i++) p.line(160 + i * 26, SEAM + 1, 160 + i * 60, 190, 8);
   p.hline(0, 319, 150, 8);
@@ -221,7 +223,7 @@ function paint(p: Surface, g: Game) {
   for (let i = 0; i < 8; i++) p.ellipse(10 + r() * 300, 140 + r() * 45, 4 + r() * 6, 1 + r() * 2, dith(7, 8, 6));
 
   // ---- the puddle, spanning the corridor: dark wet rim, then water that mirrors the wall
-  p.poly(PUDDLE.map((v, i) => (i % 2 ? v : v + (v < 193 ? -3 : 3))), 8);
+  p.poly(PUDDLE.map((v, i) => (i % 2 ? v : v + (v < 193 ? -3 : 3))), 8); // dark wet rim
   puddleReflection(p);
   // the cable: out of the junction box, down the wall, across the floor, into the water
   p.lines([178, 85, 180, 98, 179, 110, 181, SEAM, 184, 126, 186, 132, CABLE_END[0], CABLE_END[1]], 0, 2);
@@ -275,51 +277,36 @@ function litPool(p: Surface, cx: number, cy: number, rx: number, ry: number) {
       const c = p.get(x, y);
       const lit = LIT[c];
       if (lit === undefined) continue;
-      if (d < 0.7 || BAYER[((y & 3) << 2) | (x & 3)] / 16 > (d - 0.7) / 0.3) p.plot(x, y, lit);
+      if (d < 0.86 || BAYER[((y & 3) << 2) | (x & 3)] / 16 > (d - 0.86) / 0.14) p.plot(x, y, lit);
     }
 }
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
 
-/** Water: a darkened, rippled mirror image of the wall above, plus a few glints. */
+/** Water: deep blue with a lighter band reflecting the lit wall, glints, and the cable's dark reflection. */
 function puddleReflection(p: Surface) {
-  const WATER: Record<number, number> = { 0: 0, 1: 1, 2: 1, 3: 1, 4: 0, 5: 1, 6: 6, 7: 9, 8: 1, 9: 1, 10: 3, 11: 3, 12: 4, 13: 5, 14: 6, 15: 9 };
-  const ys = PUDDLE.filter((_, i) => i % 2).sort((a, b) => a - b);
-  const top = ys[0],
-    bot = ys[ys.length - 1];
-  const inside = (x: number, y: number) => {
-    let c = false;
-    const n = PUDDLE.length / 2;
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = PUDDLE[i * 2],
-        yi = PUDDLE[i * 2 + 1],
-        xj = PUDDLE[j * 2],
-        yj = PUDDLE[j * 2 + 1];
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
-    }
-    return c;
-  };
-  const src: number[] = [];
-  for (let y = top; y < bot; y++)
-    for (let x = 140; x < 250; x++) {
-      if (!inside(x + 0.5, y + 0.5)) continue;
-      const wob = Math.round(Math.sin(y * 0.9) * 1.2);
-      const ry = Math.round(SEAM - 1 - (y - SEAM) * 0.95);
-      src.push(x, y, ry >= 0 ? p.get(x + wob, ry) : 0);
-    }
-  for (let i = 0; i < src.length; i += 3) {
-    const x = src[i],
-      y = src[i + 1];
-    let c = WATER[src[i + 2]] ?? 1;
-    if (c === 0) c = 1;
-    if (y % 4 === 0 && c !== 1) c = 1;
-    p.plot(x, y, c);
+  p.poly(PUDDLE, 1);
+  // a lighter band where the water mirrors the wall's light pool
+  const inner = PUDDLE.map((v, i) => (i % 2 ? Math.min(v, 150) : v));
+  for (let y = 121; y < 150; y++) {
+    // ripple lines that thin out toward the viewer
+    const every = y < 132 ? 2 : y < 142 ? 3 : 5;
+    if (y % every) continue;
+    p.clip(0, y, 320, y + 1);
+    p.poly(inner, 9);
   }
+  p.clip();
+  // reflected yellow safety line at the far edge, broken by ripples
+  for (let x = 156; x < 230; x += 5) p.hline(x, x + 2, 122, 6);
+  // the cable's reflection, wobbling down from where it enters the water
+  for (let y = CABLE_END[1] + 2; y < 168; y += 2) p.plot(CABLE_END[0] + Math.round(Math.sin(y * 0.7) * 1.5), y, 0);
   // glints
-  p.hline(158, 168, 128, 11);
-  p.hline(206, 220, 136, 11);
-  p.hline(170, 180, 166, 9);
-  p.hline(214, 222, 178, 9);
-  p.hline(154, 160, 184, 9);
+  p.hline(160, 170, 128, 11);
+  p.hline(204, 218, 135, 11);
+  p.hline(166, 180, 158, 9);
+  p.hline(212, 226, 170, 9);
+  p.hline(150, 158, 180, 9);
+  p.hline(226, 236, 184, 9);
+  p.hline(180, 186, 186, 11);
 }
 
 // ------------------------------------------------------------------ helpers
@@ -379,6 +366,7 @@ async function openSesame(g: Game) {
   g.redraw();
   await g.say('The slot slams. Bolts clunk, one after another: three, four, nine of them. With a groan of steel, the server room door swings open.');
   await g.talk('denis', "Well? Don't just stand there letting the cold air out. Get in here.", { title: 'Denis' });
+  g.checkpoint = g.serialize();
 }
 
 // ------------------------------------------------------------------ breakers
@@ -422,6 +410,7 @@ async function breaker(g: Game, n: number | null, on: boolean, all = false) {
   g.set('breaker_off');
   award(g, 'breaker_off');
   g.redraw();
+  g.checkpoint = g.serialize(); // "Try Again" keeps the breaker off
   await g.wait(400);
   await g.say('You flip breaker 3: BASEMENT AUX.\n\nWith a sad little fizz, the cable in the puddle goes quiet. The puddle is now just a puddle: big, dirty, and perfectly harmless.');
 }
@@ -472,7 +461,7 @@ export const basement: RoomDef = {
     },
     {
       id: 'slot',
-      nouns: ['slot', 'eye slot', 'eyeslot', 'peephole', 'peep hole', 'eyes', 'eyebrows', 'hatch', 'grille'],
+      nouns: ['slot', 'eye slot', 'eyeslot', 'peephole', 'peep hole', 'hatch', 'grille'],
       area: [DOOR.x + 8, DOOR.y + 13, 16, 9],
       at: [264, 126],
       when: (g) => !g.flag('door_open'),
@@ -504,7 +493,7 @@ export const basement: RoomDef = {
     },
     {
       id: 'breaker',
-      nouns: ['breaker', 'breakers', 'switch', 'switches', 'circuit breaker', 'circuit', 'circuits', 'label', 'labels', 'breaker 1', 'breaker 2', 'breaker 3', 'fuse', 'fuses', 'lever'],
+      nouns: ['breaker', 'breakers', 'switch', 'switches', 'circuit breaker', 'circuit', 'circuits', 'label', 'labels', 'fuse', 'fuses', 'lever'],
       area: [PANEL.x + 2, PANEL.y + 2, PANEL.w - 4, PANEL.h - 4],
       at: [99, 126],
       when: (g) => !!g.flag('panel_open'),
@@ -549,14 +538,14 @@ export const basement: RoomDef = {
       look: 'A junction box with its cover long gone. A frayed cable spills out of it like it is trying to escape. Given the state of the basement, you can relate.',
     },
     {
-      id: 'tube',
-      nouns: ['tube', 'fluorescent', 'fluorescent light', 'fluorescent tube', 'flickering light', 'light', 'lights', 'lamp', 'ceiling light'],
+      id: 'light',
+      nouns: ['light', 'lights', 'lamp', 'tube', 'fluorescent', 'fluorescent light', 'fluorescent tube', 'flickering light', 'ceiling light'],
       area: [94, 28, 46, 8],
       look: 'A fluorescent tube in its final days, flickering like it is trying to send you a message in Morse code. The message appears to be "HELP".',
     },
     {
       id: 'pipes',
-      nouns: ['pipes', 'pipe', 'ceiling', 'drip', 'leak', 'joint', 'pipe joint', 'sprinkler', 'sprinklers', 'cable tray'],
+      nouns: ['pipes', 'pipe', 'drip', 'leak', 'joint', 'pipe joint', 'sprinkler', 'sprinklers', 'cable tray'],
       area: [0, 6, 320, 22],
       look: 'Pipes of every vintage crowd the ceiling: insulated steam, copper water, red sprinkler mains, and a cable tray stuffed with wires that disappears into the wall above the server room door. A joint in the copper line drips steadily into the puddle below.',
     },
@@ -608,12 +597,12 @@ export const basement: RoomDef = {
   ],
   zones: [
     {
-      area: [156, WB - 1, 232, WB - 1, 236, 189, 150, 189, 146, 150],
+      area: [154, WB - 1, 230, WB - 1, 238, 150, 244, 189, 140, 189, 144, 150],
       when: (g) => !safe(g),
       enter: (g) => electrocute(g, 'You splash boldly into the puddle. The frayed cable in it takes this personally.'),
     },
     {
-      area: [156, WB - 1, 232, WB - 1, 236, 189, 150, 189, 146, 150],
+      area: [154, WB - 1, 230, WB - 1, 238, 150, 244, 189, 140, 189, 144, 150],
       when: (g) => safe(g),
       enter: async (g) => {
         g.sfx('splash');
@@ -691,6 +680,11 @@ export const basement: RoomDef = {
       if (g.flag('door_open')) return void (await g.say("Denis is inside. Go on in."));
       if (slotOpen) return void (await g.talk('denis', "Small talk is for people who've earned it. The NAME. Of my first LOVE.", { title: 'Voice Behind the Door' }));
       await g.say('You talk to the door. The door, being three inches of steel, does not answer. Maybe knock.');
+    },
+    'look ceiling': 'Pipes of every vintage crowd the ceiling: insulated steam, copper water, red sprinkler mains, and a cable tray stuffed with wires. One of them drips.',
+    'look eyes': async (g) => {
+      if (!slotOpen) return false;
+      await g.say('Two bushy gray eyebrows and a pair of extremely suspicious eyes stare at you through the slot.');
     },
     'look denis': async (g) => {
       if (slotOpen) return void (await g.say('Through the slot: bushy gray eyebrows, a lot of suspicion, and the general aura of a man who has not seen sunlight since the first Bush administration.'));
@@ -772,8 +766,8 @@ export const basement: RoomDef = {
     'read sign': 'AUTHORIZED PERSONNEL ONLY. THAT MEANS DENIS.',
     'take|eat stash,open stash': "The beans expired on January 1st, 2000. Technically, they're the only things in this building that handled the date change correctly. You leave Denis's supplies alone.",
     'use|turnon stash': 'You crank the radio. It crackles to life: "...and the stroke of midnight came and went, and nothing happened. Back to you, Bob." It is a recording. From 1999. Denis has been listening to it on loop.',
-    'turnoff|fix|reboot tube,turnon tube': 'Fluorescent tubes are hardware. Hardware is a problem for other people. Mostly for Denis.',
-    'take tube': "It's up near the ceiling, flickering away. You leave it to its Morse code.",
+    'turnoff|fix|reboot light,turnon light': 'Fluorescent tubes are hardware. Hardware is a problem for other people. Mostly for Denis.',
+    'take light': "It's up near the ceiling, flickering away. You leave it to its Morse code.",
     'look rat,take|catch rat': "You catch a glimpse of a rat along the base of the wall. It's large, well-fed, and moves with the confidence of someone who has seniority here.",
     'open|use stairdoor': async (g) => {
       await g.walk(null, 4, 160);
@@ -829,20 +823,26 @@ export const basement: RoomDef = {
     }
     // the eye-slot: Denis's eyes
     if (!g.flag('door_open') && slotOpen) {
-      const x = DOOR.x + 11,
-        y = DOOR.y + 16;
-      s.rect(x, y, 10, 3, 0);
-      const blink = (t - slotAt) % 200 > 192;
-      s.hline(x + 1, x + 3, y, 7);
-      s.hline(x + 6, x + 8, y, 7);
+      const x = DOOR.x + 10,
+        y = DOOR.y + 15;
+      s.rect(x, y, 12, 4, 0);
+      s.rect(x + 11, y, 3, 4, 7); // the cover, slid aside
+      const blink = (t - slotAt) % 200 > 190;
+      s.hline(x + 1, x + 4, y, 7); // bushy brows
+      s.hline(x + 7, x + 10, y, 7);
+      s.plot(x, y + 1, 7);
+      s.plot(x + 11, y + 1, 7);
       if (!blink) {
-        s.plot(x + 2, y + 1, 15);
-        s.plot(x + 7, y + 1, 15);
-        s.plot(x + 2 + ((t >> 6) % 2), y + 1, 0);
-        s.plot(x + 7 + ((t >> 6) % 2), y + 1, 0);
+        const look = (t >> 6) % 3 === 1 ? 1 : 0;
+        s.hline(x + 1, x + 4, y + 2, 15);
+        s.hline(x + 7, x + 10, y + 2, 15);
+        s.rect(x + 2 + look, y + 2, 2, 1, 0);
+        s.rect(x + 8 + look, y + 2, 2, 1, 0);
+        s.hline(x + 1, x + 4, y + 3, 17);
+        s.hline(x + 7, x + 10, y + 3, 17);
       } else {
-        s.hline(x + 1, x + 3, y + 1, 17);
-        s.hline(x + 6, x + 8, y + 1, 17);
+        s.hline(x + 1, x + 4, y + 2, 17);
+        s.hline(x + 7, x + 10, y + 2, 17);
       }
     }
     // through the open door: the server room's blinkenlights

@@ -52,6 +52,8 @@ function landing(p: Surface, x0: number, x1: number, c: number, rail: boolean, r
   p.rect(x0, c + D, x1 - x0, T, 8);
   p.hline(x0, x1 - 1, c + D, 7);
   p.hline(x0, x1 - 1, c + D + T - 1, 0);
+  // the slab's shadow on the wall below
+  for (let x = x0; x < x1; x++) if (x % 2 === 0) p.plot(x, c + D + T, 0);
   if (rail) railing(p, railFrom, railTo, () => c, c + D + 1);
 }
 
@@ -132,7 +134,7 @@ function paint(p: Surface, g: Game) {
     p.circle(300, c - 29, 1, 4);
   }
   // a pipe along the basement ceiling (the drip comes from here)
-  pipeH(p, 204, 258, Y1 + D + T + 2, 4, 7, 15, 8, 26);
+  pipeH(p, 204, 258, Y1 + D + T + 2, 3, 6, 14, 0, 26);
   p.rect(256, Y1 + D, 3, T + 6, 8); // elbow up into the slab
 
   // ---- painted dado bands that follow the stairs
@@ -184,8 +186,8 @@ function paint(p: Surface, g: Game) {
   p.micro(139, 110, '!!', 12);
   p.micro(206, 62, 'WORKS ON MY', 11);
   p.micro(212, 68, 'MACHINE', 11);
-  p.micro(168, 142, 'HERE BE', 10);
-  p.micro(168, 148, 'DRAGONS', 10);
+  p.micro(163, 142, 'HERE BE', 10);
+  p.micro(163, 148, 'DRAGONS', 10);
   p.lines([197, 141, 197, 151, 194, 148, 197, 151, 200, 148], 10);
   // a smiley on the 2F wall
   p.circle(246, 48, 4, 0);
@@ -197,7 +199,7 @@ function paint(p: Surface, g: Game) {
   // ---- the basement level: floor and storage under the stairs
   p.rect(0, Y3 - D, 320, 190 - (Y3 - D), 8);
   p.hline(0, 319, Y3 - D, 0);
-  p.speckle(0, Y3 - D + 1, 320, 12, 0, 0.06, 5);
+  p.speckle(0, Y3 - D + 1, 320, 12, 0, 0.025, 5);
   cardboardBox(p, 6, 164, 28, 13, 'XMAS 98');
   cardboardBox(p, 36, 167, 22, 10, 'Y2K');
   cardboardBox(p, 62, 169, 30, 8, 'DO NOT');
@@ -299,6 +301,7 @@ async function lightUp(g: Game) {
   g.light = { r: 60, rainbow: true };
   lighting = false;
   award(g, 'light_keyboard');
+  g.checkpoint = g.serialize(); // "Try Again" comes back with the lights on
   await g.say("You flip the switch on the Rainbow Warrior.\n\nThe stairwell EXPLODES into color. Red, orange, green, cyan and violet chase each other across the concrete like a roller rink in 1987. Nicholas would weep with pride.\n\nBelow you, the stairs zig-zag down into the dark, toward the basement.");
 }
 
@@ -311,6 +314,12 @@ const darkLook = async (g: Game, c: Command) => {
 };
 
 async function leaveTop(g: Game) {
+  if (!lit(g) && level(g) > 0) {
+    // in the dark, heading up means stumbling onto the stairs
+    await g.walk(null, XB + 4, Y3);
+    await g.walk(null, XB - 20, flightY(XB - 20, Y2, true));
+    return;
+  }
   await g.walk(null, 26, Y0 - D + 1);
 }
 async function leaveBottom(g: Game) {
@@ -339,7 +348,7 @@ export const stairwell: RoomDef = {
   hotspots: [
     {
       id: 'door',
-      nouns: ['door', 'doors', 'fire door', 'top door', 'third floor door', '3f door', 'hallway door', 'exit door', 'no re entry'],
+      nouns: ['door', 'doors', 'top door', 'third floor door', '3f door', 'hallway door', 'no re entry'],
       area: [DOOR3[0] - 3, DOOR3[1] - 3, 30, 49],
       at: [30, Y0 - 2],
       look: 'The fire door back to the third floor. It has a NO RE-ENTRY sign, which tonight is more of a philosophy than a rule: it opens from this side just fine.',
@@ -363,7 +372,7 @@ export const stairwell: RoomDef = {
       nouns: ['basement door', 'b1 door', 'bottom door', 'b1', 'basement', 'denis sign'],
       area: [DOORB[0] - 3, DOORB[1] - 12, 30, 58],
       at: [276, Y3 - 3],
-      look: 'The door to the basement, B1. Someone has added a plate above it that just says DENIS! with an exclamation point, the way other buildings say HIGH VOLTAGE. A flickering light leaks through its little window.',
+      look: 'The door to the basement, B1. Someone has screwed a plate beside it that just says DENIS! with an exclamation point, the way other buildings say HIGH VOLTAGE. A flickering light leaks through its little window.',
     },
     {
       id: 'stairs',
@@ -434,7 +443,8 @@ export const stairwell: RoomDef = {
   nouns: {
     reader: ['reader', 'card reader', 'badge reader', 'keycard reader', 'scanner'],
     lightswitch: ['light switch', 'switch', 'lightswitch', 'switches'],
-    walls: ['wall', 'walls', 'concrete', 'block', 'blocks', 'cinder blocks', 'paint', 'stripe'],
+    wall: ['wall', 'walls', 'concrete', 'cinder blocks', 'blue stripe', 'paint', 'stripe'],
+    light: ['light', 'lights', 'lamp', 'lighting', 'stairwell lights'],
   },
   verbs: {
     'look ?,read ?,search ?': darkLook,
@@ -479,6 +489,15 @@ export const stairwell: RoomDef = {
       g.sfx('knock');
       await g.say("You knock on the basement door. Nobody answers. It doesn't seem to be locked, though. Denis apparently trusts the stairwell to keep people out. Fair.");
     },
+    // all movement goes through here, so a fall in the dark can never race a room change
+    'go|exit|enter ?,exit': async (g, c) => {
+      const n = c.noun;
+      if (n && !['up', 'down', 'north', 'south', 'east', 'west', 'stairs', 'door', 'basementdoor', 'basement'].includes(n)) return false;
+      if (n === 'up' || n === 'north' || n === 'west' || n === 'door') return void (await leaveTop(g));
+      if (n === 'down' || n === 'south' || n === 'east' || n === 'basementdoor' || n === 'basement') return void (await leaveBottom(g));
+      if (n === 'stairs') return void (await (c.words.includes('up') ? leaveTop(g) : leaveBottom(g)));
+      await (level(g) >= 2 ? leaveBottom(g) : leaveTop(g));
+    },
     'go|climb stairs,climb,climb down': async (g, c) => {
       const up = c.words.includes('up') || c.verbWord === 'climb up' || c.verbWord === 'ascend';
       if (up) return void (await leaveTop(g));
@@ -505,7 +524,7 @@ export const stairwell: RoomDef = {
     'drink|touch|take drip': "It's basement water, of unknown provenance, dripping from a pipe of unknown purpose. You have standards. Low ones, tonight, but standards.",
     'take|read|turn standpipe,open standpipe': 'You try a valve. Painted shut. They are all painted shut. In an actual fire, you suspect the plan is "Denis".',
     'take elight': "It's bolted to the wall and dead anyway. Which describes a lot of things in this building.",
-    'look walls,touch walls': async (g) => {
+    'look wall,touch wall': async (g) => {
       if (!lit(g)) return void (await g.say('You put a hand on the wall. Cold concrete block. It is very much a wall. That is all you can tell in the dark.'));
       await g.say('Painted concrete block, with a blue stripe that follows the stairs down and a yellow line along its top. Someone in 1987 thought this was cheerful.');
     },
@@ -539,6 +558,7 @@ export const stairwell: RoomDef = {
     if (lit(g) && !g.light?.rainbow && !lighting) {
       g.light = { r: 60, rainbow: true };
       award(g, 'light_keyboard');
+      g.checkpoint = g.serialize();
     }
   },
   overlay(g, s, t) {
@@ -553,7 +573,7 @@ export const stairwell: RoomDef = {
     // the drip from the basement pipe
     const ph = t % 110;
     const px = 240,
-      py0 = Y1 + D + T + 7;
+      py0 = Y1 + D + T + 5;
     if (ph < 50) {
       if (ph > 20) s.plot(px, py0, 9);
     } else if (ph < 72) {
@@ -588,7 +608,13 @@ export const stairwell: RoomDef = {
     const y = Math.round(p.y) - 16;
     const x0 = Math.round(p.x) + (p.dir === 'left' ? -8 : p.dir === 'right' ? 1 : -4);
     const w = p.dir === 'down' ? 9 : 7;
-    s.rect(x0, y, w, 2, 0);
-    for (let i = 0; i < w; i++) s.plot(x0 + i, y, cols[(i + Math.floor(t / 6)) % cols.length]);
+    const pri = g.pic.pri;
+    const py = Math.round(p.y);
+    for (let i = 0; i < w; i++) {
+      const x = x0 + i;
+      // respect priority: the keyboard hides behind the front flight like the rest of Dominic
+      if (pri[y * 320 + x] <= py) s.plot(x, y, cols[(i + Math.floor(t / 6)) % cols.length]);
+      if (pri[(y + 1) * 320 + x] <= py) s.plot(x, y + 1, 0);
+    }
   },
 };

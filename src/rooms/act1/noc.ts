@@ -7,7 +7,7 @@ import { dith } from '../../engine/palette';
 import { textWidth } from '../../engine/font';
 import { Actor } from '../../engine/actor';
 import { serverRack, blinkLeds, keyboard } from '../../art/lib';
-import { lerpY, segDigit, chairBack, editImg, box } from '../../art/office_props';
+import { lerpY, segDigit, chairBack, editImg, box, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_props';
 import { person } from '../../art/cast';
 import { X } from '../../engine/palette-ext';
 import { award } from '../../content/points';
@@ -401,6 +401,7 @@ export const noc: RoomDef = {
       s.line(164, 6, 180, 9, 4);
     }
   },
+  nouns: { chair: ['chair', 'chairs', 'fahims chair'], beacon: ['beacon', 'alarm light', 'red light', 'siren'], ...BASE_NOUNS, ...itemNouns(['coffee', 'mug', 'report', 'candy']), ...COMPUTER_NOUNS },
   verbs: {
     'look fahim': async (g) =>
       g.say(
@@ -501,6 +502,14 @@ export const noc: RoomDef = {
       if (!g.flag('fahim_awake')) return void (await g.talk('fahim', c.noun === 'candy' ? '...sugar... no... that just makes the crash worse... ...coffee...' : '...not... coffee...'));
       if (c.noun === 'report') return void (await g.talk('fahim', "Don't give it back to me! Give it to Phil! That's the whole point of the paperwork!"));
       await g.talk('fahim', "Unless that fixes a core panic, I'm good. Thanks though.");
+    },
+    'look computer': async (g) => g.say((noc.hotspots!.find((h) => h.id === 'console')!.look as (g: Game) => string)(g)),
+    'look chair': async (g) => g.say(g.flag('fahim_awake') ? "Fahim's chair, swiveled back to face the dashboards. It has a permanent Fahim-shaped dent." : "Fahim's chair, swiveled around to face the room. Fahim has sunk into it like a man melting into a beanbag."),
+    'look light,look beacon': 'The overheads are off. The NOC is lit by the red glow of the dashboards and a red alarm beacon spinning on the ceiling, which nobody can figure out how to turn off. It runs on the Monolith.',
+    'turnoff|attack|take beacon': "The beacon is on the ceiling, out of reach, and wired into the Monolith. Like everything that's annoying tonight.",
+    'deploy,deploy ?': async (g) => {
+      if (g.flag('fahim_awake')) return void (await g.talk('fahim', "Deploy? DEPLOY? Dominic. Look up. Read the banner. Read it out loud. Now look at a calendar. Now look at me."));
+      await g.say('You glance up at the banner. RULE #1: NEVER DEPLOY ON A FRIDAY. You glance at Fahim, who has been awake for thirty-six hours because of the last Friday deploy. You decide not to.');
     },
     'read rule,look friday': async (g) => g.say('"RULE #1: NEVER DEPLOY ON A FRIDAY." Somebody has underlined FRIDAY three times.'),
     'take rule,fix rule': "That banner is the closest thing this company has to a constitution. You leave it up.",

@@ -32,7 +32,6 @@ const gc = {
   bubbleT: 0,
 };
 
-(globalThis as any).__gcC = gc; // DEBUG
 function gcActor(g: Game) {
   return g.actor('gc');
 }
@@ -219,9 +218,19 @@ function tick(g: Game) {
       }
       break;
     }
+    case 'still':
+      // badge already worn on arrival: roll over and check it
+      gc.eye = Math.sin(gc.ticks / 25) * 5;
+      if (gc.ticks > 30 && g.busy === 0 && !g.scored('gc_badge')) {
+        gc.state = 'scan';
+        g.script(async () => {
+          await g.say('The Garbage Collector halts mid-sweep. Its red eye swivels toward you, and it trundles over with a squeak of treads.');
+          await gcScan(g);
+        });
+      } else if (g.scored('gc_badge')) gc.state = 'patrol';
+      break;
     case 'scan':
     case 'alert':
-    case 'still':
     case 'eat':
       break;
   }
@@ -417,8 +426,8 @@ function overlay(g: Game, s: Surface, t: number) {
       s.plot(93, 100, 11);
     }
   }
-  driftBits(s, t, 4, 70, 100, 50, 61, 5, [5, 8, 13]);
-  driftBits(s, t, 220, 60, 100, 60, 62, 5, [5, 8, 13]);
+  driftBits(s, t, 4, 40, 100, 40, 61, 5, [5, 8, 13]);
+  driftBits(s, t, 220, 30, 100, 40, 62, 5, [5, 8, 13]);
   // the GC's shadow
   const a = gcActor(g);
   if (a) {
@@ -476,6 +485,7 @@ export const heap: RoomDef = {
     [0, 178, 34, 12],
     [282, 166, 38, 24],
     [0, 126, 6, 2],
+    [22, 146, 7, 5],
   ],
   look: (g) =>
     `The Heap: a wasteland of discarded objects. Mountains of orphaned arrays, abandoned strings, deprecated icons and broken floppies stretch to the horizon, under a sky gauge that reads HEAP: 98% USED.\n\n${
@@ -484,10 +494,11 @@ export const heap: RoomDef = {
         : 'A large robot made from a trash can trundles between the piles, scanning everything with a red eye. It looks like it collects anything that nobody wants.'
     }${g.flag('jar_taken') ? '' : ' On a small pile near you, something glassy glints.'}`,
   hotspots: [
+    { id: 'floor', nouns: ['floor', 'ground', 'grid', 'magenta grid'], area: [0, 99, 320, 91], look: 'A magenta grid, littered with stray bits and bytes that fell off the piles. Nobody is going to come back for them.' },
     { id: 'sky', nouns: ['sky', 'stars', 'space'], area: [0, 16, 320, 24], look: 'A black sky, faintly lit by the glow of 64 kilobytes of overcommitted memory.' },
     {
-      id: 'bar',
-      nouns: ['bar', 'gauge', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph'],
+      id: 'gauge',
+      nouns: ['gauge', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph', 'heap bar'],
       area: [6, 1, 308, 17],
       look: 'A memory map stretches across the sky from 0X0000 to 0XFFFF: red where memory is allocated, black where it is free, and a fine confetti of fragments everywhere else. HEAP: 98% USED. Somebody should really look into that. Somebody, in fact, is.',
     },
@@ -500,7 +511,7 @@ export const heap: RoomDef = {
       area: [212, 42, 50, 22],
       look: 'A red sign stuck in the junk: DEPRECATED. A smaller sign nailed underneath it reads: "THIS SIGN IS DEPRECATED. PLEASE USE THE NEW SIGN." There is no new sign.',
     },
-    { id: 'crt', nouns: ['crt', 'old monitor', 'monitor', 'screen', 'tv'], area: [282, 164, 20, 18], look: 'A cracked old CRT monitor. Its screen still glows faintly with the ghost of a screensaver: flying toasters, burned in forever.' },
+    { id: 'computer', nouns: ['crt', 'old monitor', 'monitor', 'screen', 'tv', 'computer'], area: [282, 164, 20, 18], look: 'A cracked old CRT monitor. Its screen still glows faintly with the ghost of a screensaver: flying toasters, burned in forever.' },
     { id: 'road', nouns: ['road', 'path', 'data path'], area: [0, 156, 92, 16], look: 'The glowing road from the Boot Sector runs a little way into the Heap, then gives up, buried under junk.' },
     { id: 'boot_sign', nouns: ['boot sign', 'exit sign', 'arrow', 'neon sign'], area: [6, 124, 36, 26], look: 'A neon sign pointing west: "<- BOOT". Back the way you came.' },
     { id: 'jarpile', nouns: ['small pile', 'little pile', 'jar pile', 'toolbar'], area: [76, 112, 48, 22], look: (g) => (g.flag('jar_taken') ? 'A little pile of junk, topped by a browser toolbar. There is a jar-shaped gap where the jar used to be.' : 'A small pile of junk, topped by an old browser toolbar. Wedged on top of it is a glass jar.') },
@@ -508,7 +519,7 @@ export const heap: RoomDef = {
   ],
   exits: [{ area: [0, 128, 6, 61], to: 'boot', at: [302, 160, 'left'], dir: 'west' }],
   nouns: {
-    gc: ['gc', 'garbage collector', 'collector', 'robot', 'trash can', 'can', 'bin', 'trashcan', 'machine', 'droid', 'eye', 'claw', 'lid'],
+    gc: ['gc', 'garbage collector', 'collector', 'robot', 'trash can', 'can', 'bin', 'trashcan', 'droid', 'red eye', 'claw', 'lid'],
   },
   verbs: {
     // ---- the badge (handled here so the Collector can react)
@@ -551,7 +562,7 @@ export const heap: RoomDef = {
       await g.say(FINDS[i % FINDS.length]);
       if (i === FINDS.length - 1) await g.say("That's about everything worth finding. Everything else here is worth exactly what someone decided: nothing.");
     },
-    'take piles,take floppy,take sign,take crt,take hourglass,take jarpile': "You don't need that. Nobody needs that. That's the whole point of the Heap.",
+    'take piles,take floppy,take sign,take computer,take hourglass,take jarpile': "You don't need that. Nobody needs that. That's the whole point of the Heap.",
     'eat piles': 'You are not that hungry, and those strings are well past their expiry date.',
     'kick|push piles,climb piles': 'You nudge a pile. It shifts with a sound like a thousand null pointers being dereferenced at once, then settles. Best not.',
     'read sign': 'DEPRECATED. And underneath, smaller: "THIS SIGN IS DEPRECATED. PLEASE USE THE NEW SIGN." There is no new sign.',
@@ -593,6 +604,19 @@ export const heap: RoomDef = {
       if (!g.flag('badge_worn')) return false;
       await g.say('Take off your badge? Here? With the Garbage Collector looking for unreferenced objects? Bold. Very bold. No.');
     },
+    'ask gc ?,tell gc ?': async (g) => {
+      if (!gcActor(g)) return false;
+      await g.say(g.flag('badge_worn') ? 'QUERY NOT UNDERSTOOD. I MARK. I SWEEP. I DO NOT CHAT. ...BUT THANK YOU FOR ASKING.' : 'UNREFERENCED OBJECTS DO NOT ASK QUESTIONS. UNREFERENCED OBJECTS ARE COLLECTED.', { title: 'Garbage Collector' });
+    },
+    'listen ?,listen': 'Creaks and clatters as the piles settle, the squeak of treads, and the occasional distant CLANK of something being collected forever.',
+    'smell ?,smell': 'The Heap smells of hot dust, burnt-out capacitors and stale cookies. Browser cookies, mostly.',
+    'look floor': 'A magenta grid, littered with stray bits and bytes that fell off the piles. Nobody is going to come back for them.',
+    'take floor,take bits': 'You pick up a loose byte. It is 0xFF, which is to say, completely full of itself. You put it back.',
+    'eat jar': "It's a glass jar. Even by Heap standards, that would be a bad idea.",
+    'look/in jar': async (g) => {
+      if (!g.has('jar')) return false;
+      await g.say('Empty and spotless. A trap waiting for something to catch.');
+    },
     'hide': async (g) => {
       await g.say(g.flag('badge_worn') ? 'There is no need to hide. You are referenced.' : "You crouch behind a pile of old arrays. The Garbage Collector doesn't care where you are. It cares that nothing points to you.");
     },
@@ -610,15 +634,16 @@ export const heap: RoomDef = {
     gc.beam = 0;
     gc.bubbleT = 0;
     if (from === 'boot') a.x = 230;
-    // with the badge already on, the Collector comes over to check you on arrival
-    if (g.flag('badge_worn')) gc.state = g.scored('gc_badge') ? 'patrol' : 'still';
+    // with the badge already on, the Collector comes over to check you shortly after you arrive
+    if (g.flag('badge_worn') && !g.scored('gc_badge')) gc.state = 'still';
   },
   afterEnter: async (g) => {
-    if (g.flag('badge_worn') && !g.scored('gc_badge')) {
-      await g.wait(500);
-      await g.say('The Garbage Collector halts mid-sweep. Its red eye swivels toward you, and it trundles over with a squeak of treads.');
-      await gcScan(g);
-    }
+    // (on a restore this is skipped; the 'still' state in tick() covers that case)
+    if (gc.state !== 'still' || g.scored('gc_badge')) return;
+    gc.state = 'scan';
+    await g.wait(400);
+    await g.say('The Garbage Collector halts mid-sweep. Its red eye swivels toward you, and it trundles over with a squeak of treads.');
+    await gcScan(g);
   },
   tick,
   overlay,

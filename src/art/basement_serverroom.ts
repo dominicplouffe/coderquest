@@ -72,9 +72,9 @@ export function paintServerRoom(p: Surface, o: { connected: boolean; act3: boole
   p.hline(0, 319, CEIL + 1, 7);
   p.rect(0, SEAM - 3, 320, 3, 0);
 
-  // ---- raised floor: light tiles in perspective, a few perforated vent tiles
-  p.rect(0, SEAM, 320, 190 - SEAM, 7);
-  p.gradV(0, SEAM, 320, 12, [8, 7]);
+  // ---- raised floor: anti-static blue tiles in perspective, a few perforated vent tiles
+  p.rect(0, SEAM, 320, 190 - SEAM, 1);
+  p.gradV(0, SEAM, 320, 10, [0, 1]);
   const rows: number[] = [];
   let yy = SEAM + 6,
     step = 8;
@@ -97,11 +97,14 @@ export function paintServerRoom(p: Surface, o: { connected: boolean; act3: boole
       const t = (y - SEAM) / (190 - SEAM);
       const xa = 160 + lines[ci] * (0.45 + t * 0.9) + 1,
         xb = 160 + lines[ci + 1] * (0.45 + t * 0.9);
-      for (let x = Math.ceil(xa); x < xb; x++) if ((x + y) % 2 === 0 && y % 2 === 0) p.plot(x, y, 8);
+      for (let x = Math.ceil(xa); x < xb; x++) if ((x + y) % 2 === 0 && y % 2 === 0) p.plot(x, y, 9);
     }
   }
-  for (const r of rows) p.hline(0, 319, r, 8);
-  for (const k of lines) p.line(160 + k * 0.45, SEAM, 160 + k * 1.35, 190, 8);
+  for (const r of rows) {
+    p.hline(0, 319, r, 0);
+    p.hline(0, 319, r + 1, 9);
+  }
+  for (const k of lines) p.line(160 + k * 0.45, SEAM, 160 + k * 1.35, 190, 0);
   if (o.tileUp) {
     // one tile pried up near Denis's corner: cables underneath
     p.poly([40, 132, 62, 132, 66, 144, 36, 144], 0);
@@ -199,9 +202,27 @@ export function paintServerRoom(p: Surface, o: { connected: boolean; act3: boole
     p.hline(86, 92, 88, 14);
   });
 
+  // ---- overhead cable tray, with fat bundles dropping into the cabinets
+  for (const hx of [104, 160, 222, 280]) p.vline(hx, CEIL, CEIL + 2, 0);
+  p.rect(94, CEIL + 2, 224, 4, 0);
+  p.hline(94, 317, CEIL + 2, 8);
+  for (let x = 96; x < 316; x += 2) p.plot(x, CEIL + 4, [12, 10, 14, 9, 15, 13][((x - 96) / 2) % 6 | 0]);
+  const bundle = (x: number, y1: number) => {
+    p.rect(x, CEIL + 6, 5, y1 - CEIL - 6, 0);
+    for (let y = CEIL + 6; y < y1; y++) {
+      p.plot(x + 1, y, (y >> 1) % 2 ? 9 : 1);
+      p.plot(x + 2, y, (y >> 1) % 3 ? 8 : 7);
+      p.plot(x + 3, y, (y >> 1) % 2 ? 4 : 12);
+    }
+  };
+  bundle(110, 30);
+  bundle(140, 30);
+  bundle(204, 24);
+  bundle(236, 44);
+
   // ---- THE MONOLITH
   // shadow on the floor
-  p.rect(TAPE_A - 2, SEAM, 152, 3, 8);
+  p.rect(TAPE_A - 2, SEAM, 152, 3, 0);
   tapeDrive(p, TAPE_A);
   tapeDrive(p, TAPE_B);
   cpuCabinet(p, o);

@@ -23,8 +23,7 @@ import {
   alertScreen,
   box,
   segDigit,
-  aidanCrouch,
-} from '../../art/office_props';
+  aidanCrouch, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 
@@ -51,8 +50,7 @@ function paint(p: Surface, g: Game) {
   p.rect(0, 0, 320, 190, 7);
   p.rect(0, SEAM, 320, 190 - SEAM, 8);
   p.gradV(LX, SEAM, RX - LX, 8, [0, 8]);
-  p.speckle(0, SEAM + 2, 320, 88, 0, 0.025, 41);
-  p.speckle(0, SEAM + 2, 320, 88, 7, 0.004, 42);
+  p.speckle(0, SEAM + 2, 320, 88, 0, 0.02, 41);
   // ---------------------------------------------------------------- walls
   // back wall: light gray with a corporate-blue wainscot
   p.rect(LX, 12, RX - LX, SEAM - 12, 7);
@@ -108,8 +106,6 @@ function paint(p: Surface, g: Game) {
   pl(0.55, 0.9);
   // brass knob
   p.rect(fx - 6, Math.round((fyb + fyt) / 2) + 1, 2, 2, 14);
-  // light spilling across the floor in front of the door
-  p.poly([fx, fyb + 1, fx + 3, fyb + 1, nx + 22, nyb + 6, nx + 16, nyb + 6], dith(8, 13, 4));
   // brass name plate
   p.poly([nx + 2, nyt - 10, fx - 2, fyt - 8, fx - 2, fyt - 4, nx + 2, nyt - 5], 14);
   p.line(nx + 3, nyt - 7, fx - 4, fyt - 6, 6);
@@ -207,9 +203,9 @@ function paint(p: Surface, g: Game) {
   const mTop = frontDesk(p, 236, 121, 50, { top: 6, body: 6, trim: 14, h: 18, depth: 6 });
   p.at(121, () => {
     // nameplate
-    p.rect(250, 108, 22, 5, 14);
-    p.frame(250, 108, 22, 5, 6);
-    p.micro(252, 108, 'SALES', 0);
+    p.rect(249, mTop + 1, 23, 6, 0);
+    p.rect(250, mTop + 1, 21, 5, 14);
+    p.micro(251, mTop + 1, 'SALES', 0);
     // trophy: SALESPERSON OF THE YEAR 2019
     p.rect(275, mTop - 3, 7, 3, 0);
     p.rect(277, mTop - 6, 3, 3, 14);
@@ -408,6 +404,14 @@ export const office: RoomDef = {
     [30, 122, 20, 20], // keyboard boxes
     [300, 172, 20, 18], // foreground plant
   ],
+  raw: async (g, text) => {
+    if (/^\s*(erase|wipe|clean|scrub)\b/i.test(text)) {
+      await g.approach('whiteboard');
+      await g.say("You reach for the eraser, then stop. That diagram is the only documentation the Monolith has had since 1987. Erasing it would be a crime against archaeology.");
+      return true;
+    }
+    return false;
+  },
   look: (g) =>
     `The open office: forty desks, zero walls, and an ambient noise level HR describes as "collaborative." Every monitor on the floor glows the same shade of panic red. There's a whiteboard, a water cooler, and a sign proudly counting the days since the last outage.${
       g.flag('aidan_comforted') ? '' : ' From under one of the desks, someone is sniffling.'
@@ -592,7 +596,13 @@ export const office: RoomDef = {
     { area: [282, 99, 320, 121, 320, 131, 284, 110], to: 'hallway', at: [18, 165, 'right'] },
   ],
   nouns: {
+    ...BASE_NOUNS,
+    ...itemNouns(['note', 'keyboard', 'duck', 'mug', 'coffee', 'candy', 'powerbank']),
+    ...COMPUTER_NOUNS,
     headphones: ['headphones', 'headphone', 'red headphones', 'cans', 'music', 'synthwave'],
+    desk: ['desk', 'desks', 'table', 'workstations'],
+    chair: ['chair', 'chairs', 'office chair'],
+    drawer: ['drawer', 'drawers', 'desk drawer'],
   },
   enter(g) {
     const n = addNpc(g, 'nicholas', NICK[0], NICK[1], 'up', 'type');
@@ -653,15 +663,42 @@ export const office: RoomDef = {
     const cc = [12, 14, 13, 11, 10];
     for (let i = 0; i < 6; i++) s.plot(mx + Math.floor(cr() * 24), my + Math.floor(cr() * 12), cc[i % cc.length]);
   },
-  front(g, s) {
-    // Mike's phone, wedged against his shoulder
+  front(g, s, t) {
+    // Mike's phone, wedged against his shoulder, and his BREAK! bar
     const m = g.actor('mike');
     if (m && m.visible) {
-      s.rect(m.x + 3, m.y - 26, 2, 4, 0);
-      s.plot(m.x + 3, m.y - 27, 8);
+      const x = Math.round(m.x),
+        y = Math.round(m.y);
+      s.rect(x + 3, y - 26, 2, 4, 0);
+      s.plot(x + 3, y - 27, 8);
+      // munch: the bar goes up to his mouth every few seconds
+      const up = t % 240 < 40;
+      s.rect(x - 6, up ? y - 23 : y - 19, 4, 2, 4);
+      s.plot(x - 5, up ? y - 23 : y - 19, 14);
     }
   },
   verbs: {
+    'look desk': async (g) => {
+      const x = g.player.x;
+      const id = x < 150 ? 'nickdesk' : x < 230 ? 'aidandesk' : 'mikedesk';
+      const hs = office.hotspots!.find((h) => h.id === id)!;
+      await g.say(typeof hs.look === 'string' ? hs.look : ((hs.look as (g: Game) => string)(g) as string));
+    },
+    'look/under desk,search desk,look/under aidandesk,search aidandesk,look/under nickdesk,search nickdesk,search mikedesk': async (g, c) => {
+      const aidan = c.noun === 'aidandesk' || (c.noun === 'desk' && g.player.x > 150 && g.player.x < 240);
+      if (aidan && !g.flag('aidan_comforted')) {
+        await approachAidan(g);
+        return void (await g.say("Under Aidan's desk: Aidan. He looks up at you with the eyes of a kicked puppy who has just learned what a core panic is. Maybe talk to him."));
+      }
+      await g.say("You glance under the desk. Cables, dust bunnies, a single sock, and a stress ball that rolled there in 2023. Nothing that will fix production.");
+    },
+    'open|search drawer': "Your coworkers' desk drawers are their own business. HR training module seven was very clear about this. There was a quiz.",
+    'look chair': async (g) =>
+      g.say(
+        g.flag('aidan_comforted')
+          ? "The office chairs: Nicholas's (black, broken in), Aidan's (red, back on its wheels), and Mike's (black leather, high-backed, a little too big for the desk)."
+          : "The office chairs: Nicholas's (black, broken in), Mike's (black leather, high-backed), and Aidan's, which is lying on its side where he abandoned it.",
+      ),
     'look nicholas': async (g) =>
       g.say(
         `Nicholas: frontend developer, keyboard collector, owner of the biggest red headphones in the tri-state area. ${
@@ -860,11 +897,11 @@ export const office: RoomDef = {
       if (c.verb === 'knock') return void (await g.say('You knock on the open door. From inside, Phil calls: "It\'s open! Unless you\'re an investor. Then it\'s also open, but please wait one moment."'));
       await g.say("Phil's door is already ajar. Phil believes in an open-door policy. He wrote a forty-page memo about it. Just walk on in.");
     },
-    'go|enter phildoor': async (g) => {
+    'go|enter phildoor,go|enter phil': async (g) => {
       await g.walk(null, 16, 118);
       g.goto('phil', [296, 160, 'left']);
     },
-    'go|enter lobbydoor': async (g) => {
+    'go|enter lobbydoor,go|enter elevator': async (g) => {
       await g.walk(null, 304, 114);
       g.goto('hallway', [18, 165, 'right']);
     },

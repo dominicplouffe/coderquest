@@ -170,7 +170,10 @@ export const ANIMATE = new Set<string>();
 
 // --------------------------------------------------------------- vocabulary
 type PhraseMap = Map<string, string>;
+/** items, people and built-in words: meaningful everywhere */
 const globalNouns: PhraseMap = new Map();
+/** words that belong to some room: recognized everywhere, but only resolve to "not here" elsewhere */
+const elsewhereNouns: PhraseMap = new Map();
 const verbPhrases: { words: string[]; verb: string; prep: string | null }[] = [];
 for (const [verb, list] of Object.entries(VERBS)) {
   for (const entry of list) {
@@ -196,6 +199,16 @@ export function addNouns(map: Record<string, string[]>, target: PhraseMap = glob
   }
 }
 
+/** Register a room's vocabulary as known words without letting it shadow other rooms. */
+export function addKnownNouns(map: Record<string, string[]>) {
+  for (const [id, phrases] of Object.entries(map)) {
+    for (const p of [id, ...phrases]) {
+      const k = normalize(p);
+      if (!elsewhereNouns.has(k)) elsewhereNouns.set(k, `elsewhere:${id}`);
+    }
+  }
+}
+
 export function makeLocal(map: Record<string, string[]> | undefined): PhraseMap {
   const m: PhraseMap = new Map();
   if (map) addNouns(map, m);
@@ -205,6 +218,7 @@ export function makeLocal(map: Record<string, string[]> | undefined): PhraseMap 
 export function isKnownWord(w: string): boolean {
   if (STOP.has(w) || PREPS.has(w) || w in NUMBERS || w in DIRS || /^\d+$/.test(w)) return true;
   for (const k of globalNouns.keys()) if (k.split(' ').includes(w)) return true;
+  for (const k of elsewhereNouns.keys()) if (k.split(' ').includes(w)) return true;
   for (const v of verbPhrases) if (v.words.includes(w)) return true;
   return false;
 }
@@ -322,7 +336,8 @@ export function parse(raw: string, local?: PhraseMap, extraLocal?: PhraseMap): C
   const nouns: { id: string; word: string }[] = [];
   let prepSeen: string | null = null;
   let i = 0;
-  const lookup = (phrase: string): string | undefined => local?.get(phrase) ?? extraLocal?.get(phrase) ?? globalNouns.get(phrase);
+  const lookup = (phrase: string): string | undefined =>
+    local?.get(phrase) ?? extraLocal?.get(phrase) ?? globalNouns.get(phrase) ?? elsewhereNouns.get(phrase);
   while (i < restWords.length) {
     const w = restWords[i];
     let matched = false;

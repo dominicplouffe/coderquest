@@ -116,7 +116,8 @@ function paint(p: Surface, g: Game) {
     const mx = 236,
       my = 50,
       mr = 24;
-    p.glow(mx, my, mr + 10, 1, -1);
+    p.glow(mx, my, mr + 8, 1, -1, mr + 8);
+    p.ellipse(mx, my, mr - 3, mr - 3, 0);
     for (let a = 0; a < 360; a += 1) {
       const rad = (a * Math.PI) / 180;
       for (let d = mr - 2; d <= mr + 1; d++) {
@@ -402,8 +403,9 @@ export const bridge: RoomDef = {
       ? 'The Null Void: an endless purple dark where zeros fall forever. A bridge of linked-list nodes spans it, sagging gently, every pointer now pointing where it should. Far to the west, a castle glows green.'
       : "The Null Void: an endless purple dark where zeros fall like rain and never land. A bridge of linked-list nodes spans it, each one pointing to the next... except where one is simply missing. In the gap, a sign glows: NULL.\n\nFar to the west, a castle glows green. Someone has painted MIND THE GAP on the deck.",
   nouns: {
-    zeros: ['zeros', 'zeroes', 'zero', 'falling zeros', 'rain', 'numbers', 'digits'],
-    orphans: ['debris', 'orphans', 'orphaned objects', 'objects', 'undefined', 'nan', 'junk', 'floating text', 'garbage'],
+    zeros: ['zeros', 'zeroes', 'zero', 'falling zeros', 'rain'],
+    labels: ['head', 'head node', 'tail', 'tail node', 'cafe', 'beef', 'food', 'f00d', 'dead', 'c0de', 'data', 'data fields', 'labels', 'hex'],
+    orphans: ['debris', 'orphans', 'orphaned objects', 'undefined', 'nan', 'floating text'],
   },
   hotspots: [
     {
@@ -414,19 +416,19 @@ export const bridge: RoomDef = {
     },
     {
       id: 'moon',
-      nouns: ['moon', 'empty set', 'symbol', 'null moon', 'circle', 'slash', 'sky'],
+      nouns: ['moon', 'empty set', 'symbol', 'null moon', 'circle', 'slash'],
       area: [204, 18, 64, 64],
       look: 'A vast empty-set symbol hangs in the sky over the void, a ring with a slash through it, glowing a faint purple. The Null Moon. It illuminates nothing, which is fitting.',
     },
     {
       id: 'castle',
-      nouns: ['castle', 'fortress', 'green castle', 'lair', 'distance', 'west'],
+      nouns: ['castle', 'fortress', 'green castle', 'lair', 'distance'],
       area: [8, 52, 72, 60],
       look: 'Far to the west, at the end of the list, a castle glows phosphor green. Even from here you can see that its walls are written in COBOL.',
     },
     {
       id: 'grid',
-      nouns: ['grid', 'platform', 'boot sector', 'east', 'ledge'],
+      nouns: ['grid', 'platform', 'boot sector', 'ledge', 'anchor'],
       area: [262, 112, 58, 40],
       look: 'The edge of the Boot Sector, back to the east. Solid ground, or what passes for it in here.',
     },
@@ -511,9 +513,21 @@ export const bridge: RoomDef = {
       return fallToDeath(g, 'jump');
     },
     'go down': async (g) => fallToDeath(g, 'jump'),
+    'go bridge|arrows|newnode,walk bridge': async (g) => {
+      // "cross the bridge": head for whichever end is farther away
+      const west = g.player.x > 160;
+      await g.walk(null, west ? 2 : 318, 160);
+    },
     // ---------------------------------------------------------------- scenery
     'look down,look/under bridge': "Below the bridge, the void just keeps going. Zeros fall past the nodes and dwindle to nothing. You can't see a bottom. There isn't one. That's what makes it a void instead of a hole.",
+    'look sky': 'Above the void hangs a vast empty-set symbol, the Null Moon, and from the dark around it zeros are born and start to fall.',
     'look up': 'Above you, zeros are born out of the dark and start falling. Nobody knows where they come from. Nobody knows where they go. That is the whole of /dev/null theology.',
+    'look|read labels,read bridge|nodes|arrows': async (g) => {
+      await g.say(
+        `Each node's data field holds a little hex: HEAD, CAFE, ${g.flag('bridge_fixed') ? 'ACED, ' : '(nothing), '}BEEF, F00D, DEAD, C0DE, TAIL. Whoever built this bridge was hungry, and had opinions about coffee.`,
+      );
+    },
+    'search void|zeros': 'You search the void. There is nothing in it. You check twice. There is still nothing in it, which makes it, technically, the most successful search of your career.',
     'look zeros': 'Zeros, falling forever. Every value anyone ever discarded, every log line piped to /dev/null, every "> /dev/null 2>&1". They all end up here, as zeros, falling.',
     'take|catch zeros': "You catch a falling zero. It's nothing. Literally nothing. You let it go and it keeps falling, unbothered.",
     'look orphans': 'Orphaned objects drift through the void: an UNDEFINED, a NAN that refuses to equal itself, a dangling *PTR, an [OBJECT OBJECT] that nobody ever overrode toString() on. Nothing references them. Nothing ever will.',

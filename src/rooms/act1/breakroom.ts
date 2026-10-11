@@ -6,7 +6,7 @@ import type { Game } from '../../engine/game';
 import { Surface, rng } from '../../engine/raster';
 import { dith } from '../../engine/palette';
 import { fluorescent, mug as drawMug, clock } from '../../art/lib';
-import { segDigit, shadow } from '../../art/office_props';
+import { segDigit, shadow, BASE_NOUNS, itemNouns, COMPUTER_NOUNS } from '../../art/office_props';
 import { award } from '../../content/points';
 import { addNpc, convo } from '../../content/helpers';
 import { HALL_ARRIVE } from './hallway';
@@ -402,6 +402,18 @@ async function bootMachine(g: Game, how: string) {
   }
 }
 
+/** Off, count to ten, on: the IT department's favorite fix. */
+async function rebootMachine(g: Game) {
+  await g.approach([CM.x + 13, 118]);
+  g.player.dir = 'up';
+  await g.pose(null, 'reach', 400);
+  g.set('coffee_off', true);
+  g.sfx('beep');
+  g.redraw();
+  await g.wait(700);
+  await bootMachine(g, 'You flip the power switch off. The SmartBrew powers down with a sad little descending chime. You count to ten, the way the IT poster recommends, and flip it back on.');
+}
+
 async function brew(g: Game) {
   await g.approach([CM.x + 13, 118]);
   g.player.dir = 'up';
@@ -680,6 +692,8 @@ export const breakroom: RoomDef = {
   ],
   exits: [{ area: [0, 186, 320, 4], to: 'hallway', at: HALL_ARRIVE.breakroom, dir: 'south|out' }],
   enter(g) {
+    brewT = -1;
+    vendT = -1;
     if (!g.flag('candy_bought')) {
       const m = addNpc(g, 'mike', MIKE_POS[0], MIKE_POS[1], 'right');
       m.data.gap = 18;
@@ -693,6 +707,13 @@ export const breakroom: RoomDef = {
         a.pose = (k > 200 && k < 212) || (k > 224 && k < 236) ? 'reach' : null;
       };
     }
+  },
+  raw: async (g, text) => {
+    if (/\boff\b.*\b(and|then)\b.*\bon\b/i.test(text) && !/vending|fridge|microwave/i.test(text)) {
+      await rebootMachine(g);
+      return true;
+    }
+    return false;
   },
   afterEnter: async (g) => {
     if (g.flag('candy_bought') || g.flag('br_mike_greeted')) return;
@@ -755,13 +776,20 @@ export const breakroom: RoomDef = {
     const x = Math.round(m.x),
       y = Math.round(m.y);
     if (m.pose === 'reach') return;
-    const hx = m.dir === 'left' ? x - 4 : m.dir === 'right' ? x - 1 : x + 4;
-    s.rect(hx, y - 18, 4, 6, 8);
-    s.plot(hx + 1, y - 16, 11);
-    s.plot(hx + 2, y - 16, 11);
+    const hx = m.dir === 'left' ? x - 3 : m.dir === 'right' ? x - 1 : x + 4;
+    s.rect(hx, y - 17, 5, 7, 0);
+    s.rect(hx + 1, y - 16, 3, 5, 7);
+    s.plot(hx + 1, y - 14, 11);
+    s.plot(hx + 3, y - 14, 11);
+    s.plot(hx + 2, y - 12, 11);
   },
   nouns: {
+    ...BASE_NOUNS,
+    ...itemNouns(['mug', 'coffee', 'quarter', 'candy', 'powerbank', 'phone']),
+    ...COMPUTER_NOUNS,
     machine: ['machine', 'machines'],
+    vent: ['vent', 'air vent', 'smoke detector', 'detector', 'smoke alarm'],
+    towels: ['paper towels', 'paper towel', 'towels', 'towel'],
     water: ['water', 'tap water', 'glass of water'],
   },
   verbs: {
@@ -769,14 +797,7 @@ export const breakroom: RoomDef = {
     'look machine,look computer': async (g) => g.say('Which machine? There are two: the SmartBrew 3000 coffee machine, and the vending machine. Both are having a bad day.'),
     'reboot coffeemaker|machine|computer|cmdisplay|cord,reboot': async (g, c) => {
       if (!c.noun && !g.near('coffeemaker', 60)) return false;
-      await g.approach([CM.x + 13, 118]);
-      g.player.dir = 'up';
-      await g.pose(null, 'reach', 400);
-      g.set('coffee_off', true);
-      g.sfx('beep');
-      g.redraw();
-      await g.wait(700);
-      await bootMachine(g, 'You flip the power switch off. The SmartBrew powers down with a sad little descending chime. You count to ten, the way the IT poster recommends, and flip it back on.');
+      await rebootMachine(g);
     },
     'turnoff|unplug coffeemaker|machine|computer|cord|cmdisplay,pull cord,turn coffeemaker|cord,flip coffeemaker|cord,push|use cord': async (g, c) => {
       await g.approach([CM.x + 13, 118]);
@@ -888,6 +909,10 @@ export const breakroom: RoomDef = {
       await g.say('You reach up through the pickup flap, the way every human being has tried at least once. Your arm gets about as far as your elbow. You extract it with your dignity mostly intact.');
       if (g.actor('mike')) await mikeSays(g, 'Tried that. Lost a watch.');
     },
+    'take vending,remove vending': async (g) => {
+      await approachVending(g);
+      await g.say("You'd love to peel off the WARNING sticker as a souvenir, but it's the only thing standing between this machine and a lawsuit. And it's very well glued. The machine itself weighs about as much as a small car.");
+    },
     'read vending,read sticker,look sticker': 'The sticker reads: "WARNING: DO NOT ROCK OR TILT. MACHINE MAY TIP OVER CAUSING SERIOUS INJURY OR DEATH." There is a little drawing of a stick figure being flattened. The stick figure looks hungry.',
     // ---------------- Mike
     'look mike': async (g) =>
@@ -896,8 +921,9 @@ export const breakroom: RoomDef = {
           ? "Mike from Sales: blond hair, gray suit, red tie, and the energy of a man on his fourth espresso and zero BREAK! bars. In one hand he clutches an enormous power bank. With the other, he's slapping the vending machine."
           : 'Mike went back to his desk in the open office, a happy man.',
       ),
-    'talk mike,ask mike ?,tell mike ?,say mike,hello mike': async (g) => {
+    'talk mike,ask mike ?,tell mike ?,say mike,hello mike': async (g, c) => {
       if (!g.actor('mike')) return false;
+      if (c.noun2 === 'powerbank' && g.flag('br_mike_talked')) return false;
       await g.approach(g.actor('mike')!);
       if (!g.flag('br_mike_talked')) {
         g.set('br_mike_talked');
@@ -1013,6 +1039,9 @@ export const breakroom: RoomDef = {
     },
     'sit,sit table|chair': "You sit for a second. The chair wobbles. The table is sticky. You get up. There's a production outage to fix.",
     'read table': "Yesterday's newspaper. The business section has a little article: \"MONOLITH SYSTEMS PREPARES FOR BIG INVESTOR DEMO.\" Somebody has drawn a skull on it. You suspect Fahim.",
+    'look vent': 'An air vent, and a smoke detector that has chirped "low battery" every forty seconds since 2022. Nobody has ever been able to find which one it is. It is that one.',
+    'look towels,take towels': 'A roll of paper towels, the brown industrial kind that is somehow both scratchy and non-absorbent.',
+    'look light': "The ceiling lights are off; the break room gets by on daylight from the hallway, the microwave's blinking 12:00, and the vending machine's eternal glow.",
     'take clock,fix clock': "The clock is the only thing in the building that knows what time it is. Leave it be.",
   },
 };

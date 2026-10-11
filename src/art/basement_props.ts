@@ -75,15 +75,16 @@ export function fireDoor(p: Surface, x: number, y: number, opts: { color?: numbe
     p.rect(x + 20, y + 22, 2, 5, 8);
   }
   // kick plate
-  p.rect(x + 1, y + 41, 22, 5, 8);
-  p.hline(x + 1, x + 22, y + 41, 7);
+  p.rect(x + 1, y + 42, 22, 4, 8);
+  p.hline(x + 1, x + 22, y + 42, 7);
   if (opts.sign) {
     // '|' separates lines; the plate sits below the panic bar
     const lines = opts.sign.split('|');
     const w = Math.max(...lines.map((l) => microWidth(l))) + 4;
     const sx = x + Math.floor((24 - w) / 2);
     p.rect(sx, y + 28, w, lines.length * 6 + 1, 15);
-    lines.forEach((l, i) => p.micro(sx + Math.floor((w - microWidth(l)) / 2), y + 29 + i * 6, l, 0));
+    p.frame(sx, y + 28, w, lines.length * 6 + 1, 8);
+    lines.forEach((l, i) => p.micro(sx + Math.floor((w - microWidth(l)) / 2), y + 29 + i * 6, l, 4));
   }
 }
 
