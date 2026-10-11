@@ -21,7 +21,6 @@ const GHOST_X = 236,
 
 let oracleTalking = false;
 let vimCmd = ''; // shown on the ghost's command line
-let vimCmdT = 0;
 let ascend = 0; // ghost ascension progress (ticks)
 let plus50 = 0; // "+50" floater timer
 
@@ -100,7 +99,7 @@ function crt(p: Surface) {
     p.plot(x + w - 15, y + h - 9, 8);
     p.rect(x + w - 10, y + h - 10, 3, 3, 0);
     p.plot(x + w - 9, y + h - 9, 8);
-    for (let i = 0; i < 6; i++) p.hline(x + 30 + i * 0, x + 44, y + h - 10 + (i % 3) * 2, i < 3 ? 8 : 8);
+    for (let i = 0; i < 3; i++) p.hline(x + 34, x + 50, y + h - 10 + i * 2, 8);
     p.plot(x + w - 5, y + h - 6, 10);
   });
 }
@@ -306,7 +305,6 @@ async function solveVim(g: Game, raw: string) {
   await g.talk(g.player, `Listen carefully. Press Escape. Then type ${cmd === 'ZZ' ? 'capital Z, capital Z' : cmd.split('').join(' ').replace(':', 'colon').replace('!', 'bang')}. ${cmd === 'ZZ' ? '' : 'Then press Enter.'}`);
   await g.talk(a, `Escape... ${cmd === 'ZZ' ? 'Z... Z...' : cmd.split('').join('... ').replace(':', 'colon')}...${cmd === 'ZZ' ? '' : ' ENTER?'}`);
   vimCmd = cmd;
-  vimCmdT = 999;
   g.sfx('type');
   await g.wait(500);
   g.sfx('beep');
@@ -385,7 +383,6 @@ function overlay(g: Game, s: Surface, t: number) {
     const p = g.player;
     microOutlined(s, Math.round(p.x - 14), Math.round(p.y - 46 - (150 - plus50) / 10), '+50 REP', (t >> 2) & 1 ? 14 : 15);
   }
-  if (vimCmdT > 0) vimCmdT--;
   // glow around the CRT when it speaks
   if (oracleTalking) halo(s, CRT.x + CRT.w / 2, CRT.y + CRT.h / 2, CRT.w / 2 + 8, CRT.h / 2 + 6, 2, 5);
 }

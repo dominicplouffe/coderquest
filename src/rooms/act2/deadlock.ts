@@ -980,7 +980,8 @@ export const deadlock: RoomDef = {
     'wake threada|threadb|threads': "They're wide awake. That's the problem.",
     'take|pull|pry|use locks,take|pry|pull threada|threadb|threads': async (g, c) => {
       if (g.flag('adriana_free')) return void (await g.say("You leave the padlocks where they fell. Released locks belong on the floor, where nobody's waiting for them."));
-      const w = c.noun === 'threadb' ? 'b' : c.noun === 'threada' ? 'a' : nearestThread(g);
+      const word = c.nounWord ?? '';
+      const w = c.noun === 'threadb' || /(2|two)$/.test(word) ? 'b' : c.noun === 'threada' || /(1|one)$/.test(word) ? 'a' : nearestThread(g);
       await g.approach(g.actor(`thread${w}`)!);
       await g.pose(null, 'reach', 400);
       await threadSay(g, w, 'MINE.');

@@ -498,7 +498,7 @@ export const heap: RoomDef = {
     { id: 'sky', nouns: ['sky', 'stars', 'space'], area: [0, 16, 320, 24], look: 'A black sky, faintly lit by the glow of 64 kilobytes of overcommitted memory.' },
     {
       id: 'gauge',
-      nouns: ['gauge', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph', 'heap bar'],
+      nouns: ['gauge', 'bar', 'memory bar', 'memory map', 'meter', 'usage', 'heap gauge', 'graph', 'heap bar'],
       area: [6, 1, 308, 17],
       look: 'A memory map stretches across the sky from 0X0000 to 0XFFFF: red where memory is allocated, black where it is free, and a fine confetti of fragments everywhere else. HEAP: 98% USED. Somebody should really look into that. Somebody, in fact, is.',
     },
@@ -519,6 +519,7 @@ export const heap: RoomDef = {
   ],
   exits: [{ area: [0, 128, 6, 61], to: 'boot', at: [302, 160, 'left'], dir: 'west' }],
   nouns: {
+    bits: ['bits', 'bytes', 'byte', 'litter', 'stray bits'],
     gc: ['gc', 'garbage collector', 'collector', 'robot', 'trash can', 'can', 'bin', 'trashcan', 'droid', 'red eye', 'claw', 'lid'],
   },
   verbs: {
@@ -623,17 +624,20 @@ export const heap: RoomDef = {
     ...CYBER_VERBS,
   },
   enter(g, from) {
-    const a = g.add(makeGc(210, 150));
+    // After "Try Again" / a restore, the Collector restarts well away from you and
+    // takes a few extra seconds before it notices you, so it can't re-catch you instantly.
+    const restoring = from === '__restore';
+    const gx = restoring ? (g.player.x < 160 ? 282 : 38) : from === 'boot' ? 230 : 210;
+    g.add(makeGc(gx, 150));
     gc.state = 'patrol';
-    gc.dir = -1;
-    gc.ticks = 0;
+    gc.dir = gx > 160 ? -1 : 1;
+    gc.ticks = restoring ? -100 : 0;
     gc.chaseTicks = 0;
     gc.arm = 'rest';
     gc.claw = false;
     gc.lid = 0;
     gc.beam = 0;
     gc.bubbleT = 0;
-    if (from === 'boot') a.x = 230;
     // with the badge already on, the Collector comes over to check you shortly after you arrive
     if (g.flag('badge_worn') && !g.scored('gc_badge')) gc.state = 'still';
   },

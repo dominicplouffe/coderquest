@@ -1126,6 +1126,9 @@ export class Game {
     this.player.map = null;
     this.player.z = null;
     this.player.ghost = false;
+    this.player.custom = null;
+    this.player.front = false;
+    this.player.speed = 1;
     this.light = null;
     this.dark = false;
     this.palMap = new Uint8Array(256).map((_, i) => i);
@@ -1573,6 +1576,7 @@ export class Game {
   /** Teleport to a room (testing). */
   testGoto(room: string, x?: number, y?: number) {
     this.cancelScripts();
+    this.dying = false;
     this.modals = [];
     this.playing = true;
     this.goto(room, x !== undefined && y !== undefined ? [x, y] : undefined, { noDissolve: true });

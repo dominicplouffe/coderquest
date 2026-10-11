@@ -2,6 +2,7 @@
 // Denis's breaker panel, and the steel door to the server room.
 import type { RoomDef } from '../../engine/types';
 import type { Game } from '../../engine/game';
+import { inArea } from '../../engine/game';
 import { Surface, rng, microWidth } from '../../engine/raster';
 import { dith, DARKER } from '../../engine/palette';
 import { parse } from '../../engine/parser';
@@ -20,6 +21,7 @@ let slotOpen = false;
 let slotAt = 0;
 
 const safe = (g: Game) => !!g.flag('breaker_off');
+const PUDDLE_ZONE = [154, 121, 230, 121, 238, 150, 244, 189, 140, 189, 144, 150];
 const westOfPuddle = (g: Game) => g.player.x < 160;
 
 // ------------------------------------------------------------------ painting
@@ -366,7 +368,6 @@ async function openSesame(g: Game) {
   g.redraw();
   await g.say('The slot slams. Bolts clunk, one after another: three, four, nine of them. With a groan of steel, the server room door swings open.');
   await g.talk('denis', "Well? Don't just stand there letting the cold air out. Get in here.", { title: 'Denis' });
-  g.checkpoint = g.serialize();
 }
 
 // ------------------------------------------------------------------ breakers
@@ -410,7 +411,6 @@ async function breaker(g: Game, n: number | null, on: boolean, all = false) {
   g.set('breaker_off');
   award(g, 'breaker_off');
   g.redraw();
-  g.checkpoint = g.serialize(); // "Try Again" keeps the breaker off
   await g.wait(400);
   await g.say('You flip breaker 3: BASEMENT AUX.\n\nWith a sad little fizz, the cable in the puddle goes quiet. The puddle is now just a puddle: big, dirty, and perfectly harmless.');
 }
@@ -597,12 +597,12 @@ export const basement: RoomDef = {
   ],
   zones: [
     {
-      area: [154, WB - 1, 230, WB - 1, 238, 150, 244, 189, 140, 189, 144, 150],
+      area: PUDDLE_ZONE,
       when: (g) => !safe(g),
       enter: (g) => electrocute(g, 'You splash boldly into the puddle. The frayed cable in it takes this personally.'),
     },
     {
-      area: [154, WB - 1, 230, WB - 1, 238, 150, 244, 189, 140, 189, 144, 150],
+      area: PUDDLE_ZONE,
       when: (g) => safe(g),
       enter: async (g) => {
         g.sfx('splash');
@@ -780,8 +780,10 @@ export const basement: RoomDef = {
       await g.say(safe(g) ? 'You wait. The tube flickers. The pipe drips. The Monolith stays down.' : 'You wait. The tube flickers. The cable sparks. The Monolith stays down. Time to do something.');
     },
   },
-  enter() {
+  enter(g) {
     slotOpen = false;
+    // "Try Again" may resume from a moment that was already ankle-deep in the live puddle: step back
+    if (!safe(g) && inArea(PUDDLE_ZONE, g.player.x, g.player.y)) g.player.place(128, 156, 'right');
   },
   afterEnter: async (g, from) => {
     if (from === 'stairwell' && (g.state.visited['basement'] ?? 0) <= 1) {

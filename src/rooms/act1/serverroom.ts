@@ -126,7 +126,8 @@ async function standFromChairB(g: Game) {
 }
 
 function saveCheckpoint(g: Game) {
-  // "Try Again" after a death in here returns to this moment instead of the room entry.
+  // The wake-up is a scene, not a command, so the engine hasn't checkpointed it yet:
+  // "Try Again" should never replay it.
   g.checkpoint = g.serialize();
 }
 
@@ -345,7 +346,6 @@ async function talkDenisAct3(g: Game) {
       ['denis', "I'll tell him myself. Personally. With an apology, and a cable of his choosing."],
     ]);
     award(g, 'y2k_told');
-    saveCheckpoint(g);
     return;
   }
   if (!g.flag('committed')) return void (await g.talk(d, "Well, don't look at ME. It's your fix. Commit it. The console's right there."));
@@ -389,7 +389,6 @@ async function commit(g: Game) {
   await useConsole(g);
   g.set('committed');
   award(g, 'committed');
-  saveCheckpoint(g);
   await g.say('$ git commit -am "Fix Y2K: use 4-digit years in date routine"\n\n[main 2000ad1] Fix Y2K: use 4-digit years in date routine\n 1 file changed, 2 insertions(+), 2 deletions(-)\n\nTwo characters. Twenty-seven years. One commit.', { title: 'Console' });
 }
 
@@ -414,7 +413,6 @@ async function review(g: Game) {
   ]);
   g.set('reviewed');
   award(g, 'reviewed');
-  saveCheckpoint(g);
 }
 
 async function runTests(g: Game) {
@@ -441,7 +439,6 @@ async function runTests(g: Game) {
   mode = null;
   g.set('tested');
   award(g, 'tested');
-  saveCheckpoint(g);
   await g.say('1999 / 1999 PASSED. 0 FAILED.\n\nIncluding test_y2k_rollover, test_leap_year_2000, and test_the_bug_stays_in_the_jar.\n\nEverything is green.', { title: 'Console' });
 }
 
@@ -465,7 +462,6 @@ async function waitForMidnight(g: Game) {
   await g.wait(400);
   award(g, 'midnight');
   await g.say('The clock clicks over: 12:00 AM. SAT.\n\nIt is now Saturday.');
-  saveCheckpoint(g);
 }
 
 async function deploy(g: Game) {
@@ -613,7 +609,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'lightpanel',
-      nouns: ['light panel', 'panel', 'blinkenlights', 'blinking lights', 'leds', 'lamps'],
+      nouns: ['light panel', 'panel', 'lights', 'blinkenlights', 'blinking lights', 'leds', 'lamps'],
       area: [CPU + 2, 38, 52, 26],
       at: [188, 124],
       look: (g) => (act3(g) ? 'Sixty little lamps, pulsing a calm, patient amber.' : 'Sixty little lamps in a grid, flashing red and yellow in a pattern that, if you squint, spells out "HELP" in a font from 1987.'),

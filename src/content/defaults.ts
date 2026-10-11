@@ -41,7 +41,12 @@ async function goDir(g: Game, dir: string): Promise<boolean> {
           break outer;
         }
   }
-  if (best) await g.walk(null, best.x, best.y);
+  if (best) {
+    const from = g.room;
+    const ok = await g.walk(null, best.x, best.y);
+    // stopped on the way (a zone halted Dominic), or something already moved us
+    if (!ok || g.room !== from || g.dying) return true;
+  }
   g.goto(e.to, e.at);
   return true;
 }

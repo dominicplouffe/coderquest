@@ -2,6 +2,7 @@
 // basement (bottom-right). Pitch black until Dominic lights Nicholas's RGB keyboard.
 import type { RoomDef } from '../../engine/types';
 import type { Game } from '../../engine/game';
+import { inArea } from '../../engine/game';
 import type { Command } from '../../engine/parser';
 import { Surface } from '../../engine/raster';
 import { DARKER } from '../../engine/palette';
@@ -40,6 +41,19 @@ const DOOR1: [number, number] = [26, Y2 - D - 46];
 const DOORB: [number, number] = [264, Y3 - D - 46];
 
 const lit = (g: Game) => !!g.flag('keyboard_on');
+
+// where a step in the dark is a step into thin air
+const FALL_ZONES: number[][] = [
+  [XA + 6, Y0 - D - 2, XB - 8, Y1 - D - 2, XB - 8, Y1 + D + 2, XA + 6, Y0 + D + 2],
+  [XB - 6, Y1 - D - 2, XA + 6, Y2 - D - 2, XA + 6, Y2 + D + 2, XB - 6, Y1 + D + 2],
+  [XA + 6, Y2 - D - 2, XB - 8, Y3 - D - 2, XB - 8, Y3 + D + 2, XA + 6, Y2 + D + 2],
+];
+const onStairs = (g: Game) => FALL_ZONES.some((z) => inArea(z, g.player.x, g.player.y));
+
+/** A command that walks Dominic onto the stairs in the dark waits for the fall, so it never "completes" mid-air. */
+async function awaitFall(g: Game) {
+  for (let i = 0; i < 80 && !g.dying; i++) await g.wait(50);
+}
 
 // ------------------------------------------------------------------ painting
 
@@ -301,7 +315,6 @@ async function lightUp(g: Game) {
   g.light = { r: 60, rainbow: true };
   lighting = false;
   award(g, 'light_keyboard');
-  g.checkpoint = g.serialize(); // "Try Again" comes back with the lights on
   await g.say("You flip the switch on the Rainbow Warrior.\n\nThe stairwell EXPLODES into color. Red, orange, green, cyan and violet chase each other across the concrete like a roller rink in 1987. Nicholas would weep with pride.\n\nBelow you, the stairs zig-zag down into the dark, toward the basement.");
 }
 
@@ -318,7 +331,7 @@ async function leaveTop(g: Game) {
     // in the dark, heading up means stumbling onto the stairs
     await g.walk(null, XB + 4, Y3);
     await g.walk(null, XB - 20, flightY(XB - 20, Y2, true));
-    return;
+    return awaitFall(g);
   }
   await g.walk(null, 26, Y0 - D + 1);
 }
@@ -326,7 +339,7 @@ async function leaveBottom(g: Game) {
   if (!lit(g) && level(g) < 3) {
     await g.walk(null, XA - 4, Y0);
     await g.walk(null, XA + 20, flightY(XA + 20, Y0, true));
-    return;
+    return awaitFall(g);
   }
   await g.walk(null, 276, Y3 - D + 1);
 }
@@ -432,14 +445,10 @@ export const stairwell: RoomDef = {
     },
   ],
   exits: [
-    { area: [12, Y0 - D - 2, 28, 5], to: 'hallway', at: [275, 122, 'down'], dir: 'up|north|out|west' },
+    { area: [12, Y0 - D - 2, 28, 5], to: 'hallway', at: [280, 120, 'down'], dir: 'up|north|out|west' },
     { area: [262, Y3 - D - 2, 28, 5], to: 'basement', at: [22, 160, 'right'], dir: 'down|south|east' },
   ],
-  zones: [
-    { area: [XA + 6, Y0 - D - 2, XB - 8, Y1 - D - 2, XB - 8, Y1 + D + 2, XA + 6, Y0 + D + 2], when: (g) => !lit(g), enter: fallInDark },
-    { area: [XB - 6, Y1 - D - 2, XA + 6, Y2 - D - 2, XA + 6, Y2 + D + 2, XB - 6, Y1 + D + 2], when: (g) => !lit(g), enter: fallInDark },
-    { area: [XA + 6, Y2 - D - 2, XB - 8, Y3 - D - 2, XB - 8, Y3 + D + 2, XA + 6, Y2 + D + 2], when: (g) => !lit(g), enter: fallInDark },
-  ],
+  zones: FALL_ZONES.map((area) => ({ area, when: (g: Game) => !lit(g), enter: fallInDark })),
   nouns: {
     reader: ['reader', 'card reader', 'badge reader', 'keycard reader', 'scanner'],
     lightswitch: ['light switch', 'switch', 'lightswitch', 'switches'],
@@ -538,6 +547,8 @@ export const stairwell: RoomDef = {
     'turnoff light': "There's nothing on to turn off. That's the problem.",
   },
   enter(g) {
+    // "Try Again" may resume from a moment that already had one foot over the edge: step back
+    if (!lit(g) && onStairs(g)) g.player.place(g.player.y > Y2 ? 262 : 44, g.player.y > Y2 ? Y3 + 2 : Y0, g.player.y > Y2 ? 'left' : 'right');
     setLight(g);
     if (lit(g)) award(g, 'light_keyboard');
   },
@@ -558,7 +569,6 @@ export const stairwell: RoomDef = {
     if (lit(g) && !g.light?.rainbow && !lighting) {
       g.light = { r: 60, rainbow: true };
       award(g, 'light_keyboard');
-      g.checkpoint = g.serialize();
     }
   },
   overlay(g, s, t) {
