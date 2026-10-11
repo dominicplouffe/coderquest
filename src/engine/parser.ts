@@ -134,7 +134,12 @@ const VERBS: Record<string, string[]> = {
   quit: ['quit game', 'quit', 'exit game'],
   version: ['version', 'about', 'credits'],
   pause: ['pause'],
-  curse: ['damn', 'dammit', 'shit', 'fuck', 'crap', 'hell', 'ass', 'bitch', 'bastard', 'piss'],
+  curse: ['damn', 'dammit', 'shit', 'fuck', 'crap', 'hell', 'ass', 'bitch', 'bastard', 'piss', 'swear', 'curse', 'cuss'],
+  make: ['make', 'prepare', 'cook', 'build', 'craft'],
+  lift: ['lift up', 'lift', 'raise', 'hoist', 'tip'],
+  water: ['water'],
+  charge: ['recharge', 'charge'],
+  squeeze: ['squeeze', 'squish', 'squeak', 'honk'],
   xyzzy: ['xyzzy', 'plugh', 'plover'],
 };
 

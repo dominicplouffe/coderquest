@@ -1,7 +1,8 @@
 // Global easter eggs and commands that work anywhere.
 import type { Game } from '../engine/game';
 import type { Response } from '../engine/types';
-import { normalize, parse } from '../engine/parser';
+import { normalize, parse, ANIMATE } from '../engine/parser';
+import { roomFromWords, travelTo } from './defaults';
 
 const PATHS: Record<string, string> = {
   cubicle: '/hq/3f/cubicles/dominic',
@@ -52,6 +53,24 @@ export async function globalRaw(g: Game, raw: string): Promise<boolean> {
     return rerun(g, 'look');
   }
   if (/^(who am i|what am i)$/.test(n)) return rerun(g, 'look self');
+  // "go to the break room", "walk back to the office", "enter the lab", "take the stairs"
+  let mt = /^(?:go|walk|head|run|return|travel|move|get|hurry|wander|stroll|proceed)(?: back)?(?: (?:to|into|in to|toward|towards|over to|down to|up to))(?: the)? (.+)$/.exec(n) ?? /^(?:enter|visit|take)(?: the)? (.+)$/.exec(n);
+  if (mt) {
+    const target = roomFromWords(mt[1]);
+    if (target && target !== g.room?.id && (await travelTo(g, target))) return true;
+  }
+  // "where is the jar", "where's fahim"
+  mt = /^where (?:is|are|s|did i put|can i find)(?: the| my| a| an)? (.+)$/.exec(n) ?? /^wheres(?: the| my)? (.+)$/.exec(n);
+  if (mt) {
+    const c = parse(`look ${mt[1]}`, g.localNouns);
+    g.resolveItemNouns(c);
+    if (c.noun && g.has(c.noun)) return said(g, `You're carrying it. (Press TAB to see your inventory.)`);
+    if (c.noun && g.present(c.noun)) return rerun(g, `look ${mt[1]}`);
+    if (c.noun && ANIMATE.has(c.noun)) return said(g, `You're not sure where ${c.nounWord} is right now. Not here, anyway.`);
+    const room = roomFromWords(mt[1]);
+    if (room) return said(g, room === g.room?.id ? "You're standing in it." : 'You could try GO TO ' + mt[1].toUpperCase() + '.');
+    return said(g, "You don't see one around here.");
+  }
   if (/^(what now|now what|what next|what should i do|what do i do|what do i do now|what should i do now|i am lost|im lost|i dont know what to do|any ideas|idea|ideas)$/.test(n))
     return said(g, g.has('duck') ? "When in doubt, LOOK at everything. And when that fails: TALK TO DUCK. It's what it's there for." : 'When in doubt, LOOK at everything. Your desk drawer might hold something helpful, too.');
   let m = /^(?:what|whats) (?:is |are )?(?:this |that |the |a |an )?(.+)$/.exec(n);

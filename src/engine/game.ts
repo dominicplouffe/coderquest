@@ -1191,14 +1191,51 @@ export class Game {
 
   // =========================================================== commands
   execute(text: string) {
-    const raw = text.trim();
+    let raw = text.trim();
     if (!raw) return;
     this.history.push(raw);
     if (this.history.length > 50) this.history.shift();
     this.state.moves++;
+    raw = this.applyPronouns(raw);
     const c = parse(raw, this.localNouns);
     this.resolveItemNouns(c);
+    this.notePronouns(c);
     this.runCommand(c);
+  }
+
+  // --------------------------------------------------------- pronouns ("turn it on", "give it to him")
+  private lastThing: string | null = null;
+  private lastPerson: string | null = null;
+  private lastPronounRoom: string | null = null;
+
+  private isPerson(id: string | null): boolean {
+    return !!id && (ANIMATE.has(id) || !!this.actor(id));
+  }
+
+  /** Replace it/them/him/her with the most recently mentioned thing or person. */
+  applyPronouns(raw: string): string {
+    if (this.lastPronounRoom !== this.room?.id) {
+      // people don't follow you between rooms; things you carry do
+      this.lastPerson = null;
+      if (this.lastThing && !this.state.inv.some((i) => this.items[i]?.nouns.includes(this.lastThing!))) this.lastThing = null;
+      this.lastPronounRoom = this.room?.id ?? null;
+    }
+    if (!/\b(it|them|him|her)\b/i.test(raw)) return raw;
+    let out = raw;
+    if (this.lastThing) out = out.replace(/\b(it|them)\b/i, this.lastThing);
+    if (this.lastPerson) out = out.replace(/\b(him|her)\b/i, this.lastPerson);
+    return out;
+  }
+
+  notePronouns(c: Command) {
+    for (const [id, word] of [
+      [c.noun, c.nounWord],
+      [c.noun2, c.noun2Word],
+    ] as const) {
+      if (!id || !word || id.startsWith('elsewhere:')) continue;
+      if (this.isPerson(id)) this.lastPerson = word;
+      else if (!['self', 'room', 'everything', 'north', 'south', 'east', 'west', 'up', 'down'].includes(id)) this.lastThing = word;
+    }
   }
 
   /** If a typed phrase names a carried item under a different id (e.g. "mug" for the coffee), prefer the carried one. */

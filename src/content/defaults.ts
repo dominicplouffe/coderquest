@@ -2,6 +2,7 @@
 import type { Game } from '../engine/game';
 import type { Command } from '../engine/parser';
 import { inArea, areaCenter } from '../engine/game';
+import { ANIMATE } from '../engine/parser';
 
 const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 
@@ -51,6 +52,94 @@ async function goDir(g: Game, dir: string): Promise<boolean> {
   return true;
 }
 
+/** Room names players type, for "go to the break room". */
+export const ROOM_ALIASES: Record<string, string[]> = {
+  cubicle: ['cubicle', 'my cubicle', 'dominics cubicle', 'my desk', 'my workspace'],
+  office: ['office', 'open office', 'the office', 'cubicle farm', 'open plan', 'main office'],
+  phil: ['phils office', 'phil office', 'ceo office', 'ceos office', 'corner office', 'bosss office', 'boss office'],
+  hallway: ['hallway', 'hall', 'lobby', 'elevator lobby', 'elevators', 'elevator'],
+  breakroom: ['break room', 'breakroom', 'kitchen', 'kitchenette', 'coffee room', 'lunch room', 'lunchroom'],
+  noc: ['noc', 'network operations center', 'operations center', 'ops center', 'war room', 'fahims room'],
+  lab: ['lab', 'r d lab', 'rd lab', 'r and d lab', 'research lab', 'krishnas lab', 'laboratory', 'r d'],
+  stairwell: ['stairwell', 'stairs', 'staircase', 'stairway', 'fire stairs'],
+  basement: ['basement', 'basement corridor', 'downstairs'],
+  serverroom: ['server room', 'serverroom', 'monolith room', 'data center', 'datacenter', 'machine room', 'denis room', 'deniss room'],
+  boot: ['boot sector', 'boot', 'kings throne', 'throne', 'start', 'spawn'],
+  heap: ['heap', 'the heap', 'junkyard', 'junk yard', 'dump'],
+  forest: ['forest', 'spaghetti forest', 'spaghetti'],
+  stack: ['stack', 'stack tower', 'stack overflow', 'stack overflow tower', 'tower', 'oracle'],
+  loop: ['loop', 'infinite loop'],
+  deadlock: ['deadlock', 'cage'],
+  bridge: ['bridge', 'null void', 'void', 'chasm'],
+  dragon: ['dragons lair', 'lair', 'castle', 'legacy dragon', 'dragon'],
+  core: ['core', 'the core'],
+};
+
+export function roomFromWords(words: string): string | null {
+  const w = words.replace(/^(the|my|a) /, '').trim();
+  for (const [id, names] of Object.entries(ROOM_ALIASES)) if (names.includes(w) || names.includes(`the ${w}`)) return id;
+  return null;
+}
+
+/** Walk Dominic through one exit (into its trigger area) and change rooms. */
+async function takeExit(g: Game, e: import('../engine/types').Exit): Promise<boolean> {
+  const msg = e.blocked?.(g);
+  if (msg) {
+    await g.say(msg);
+    return false;
+  }
+  const a = e.area;
+  const [x0, y0, w, h] = a.length === 4 ? a : [0, 0, 320, 190];
+  let best: { x: number; y: number } | null = null;
+  let bd = Infinity;
+  for (let y = y0; y < y0 + h; y += 2)
+    for (let x = x0; x < x0 + w; x += 2)
+      if (inArea(a, x, y) && g.walkmap.ok(x, y)) {
+        const d = Math.hypot(x - g.player.x, y - g.player.y);
+        if (d < bd) {
+          bd = d;
+          best = { x, y };
+        }
+      }
+  if (best) {
+    const from = g.room;
+    const ok = await g.walk(null, best.x, best.y);
+    if (!ok || g.room !== from || g.dying) return g.room !== from && !g.dying;
+  }
+  g.goto(e.to, e.at);
+  return true;
+}
+
+/** Walk to another room, through as many open exits as it takes. */
+export async function travelTo(g: Game, target: string): Promise<boolean> {
+  if (!g.room || g.room.id === target) return false;
+  // breadth-first search over currently-open exits
+  const prev = new Map<string, string>();
+  const queue = [g.room.id];
+  const seen = new Set(queue);
+  while (queue.length) {
+    const id = queue.shift()!;
+    if (id === target) break;
+    for (const e of g.rooms[id]?.exits ?? []) {
+      if (e.when && !e.when(g)) continue;
+      if (seen.has(e.to) || !g.rooms[e.to] || g.rooms[e.to].cutscene) continue;
+      seen.add(e.to);
+      prev.set(e.to, id);
+      queue.push(e.to);
+    }
+  }
+  if (!seen.has(target)) return false;
+  const route: string[] = [];
+  for (let id = target; id !== g.room.id; id = prev.get(id)!) route.unshift(id);
+  for (const next of route) {
+    const e = (g.room?.exits ?? []).find((x) => x.to === next && (!x.when || x.when(g)));
+    if (!e) return true;
+    if (!(await takeExit(g, e))) return true;
+    await g.wait(250);
+  }
+  return true;
+}
+
 export async function fallback(g: Game, c: Command) {
   const act = g.flag('act') ?? 1;
   if (!c.verb) {
@@ -64,12 +153,15 @@ export async function fallback(g: Game, c: Command) {
     );
   }
   if (!c.noun && c.unknown && !['say', 'type', 'go', 'wait'].includes(c.verb)) {
-    return g.say(pick([`You don't see any "${c.unknown}" around here.`, `I don't know what a "${c.unknown}" is, but there isn't one here.`]));
+    return g.say(pick([`You don't see any "${c.unknown}" around here.`, `I don't know what ${aOr(`"${c.unknown}`).replace(/^(an?) "/, '$1 "')}" is, but there isn't one here.`]));
   }
   // a noun that isn't here at all
   if (c.noun && !g.present(c.noun) && !['go', 'say', 'type', 'ask', 'tell', 'think', 'call', 'help', 'hint'].includes(c.verb)) {
     if (!['self', 'floor', 'wall', 'ceiling', 'eyes', 'hands', 'room', 'everything', 'north', 'south', 'east', 'west', 'up', 'down'].includes(c.noun)) {
-      return g.say(pick(["You don't see that here.", `There's no ${c.nounWord ?? 'such thing'} here.`, `What ${c.nounWord ?? 'thing'}? You don't see one.`]));
+      const w = displayWord(c.noun, c.nounWord);
+      if (ANIMATE.has(c.noun)) return g.say(pick([`${w} isn't here.`, `You don't see ${w} anywhere around here.`]));
+      const plural = /[^s]s$/.test(w);
+      return g.say(pick(["You don't see that here.", plural ? `There are no ${w} here.` : `There's no ${w} here.`, plural ? `What ${w}? You don't see any.` : `What ${w}? You don't see one.`]));
     }
   }
   const n = nounName(g, c);
@@ -85,8 +177,17 @@ export async function fallback(g: Game, c: Command) {
       return g.say(person ? `${n} looks back at you.` : pick([`It's just ${aOr(n)}. Nothing special.`, `You see nothing special about the ${n}.`, `The ${n} looks exactly as you'd expect.`]));
     case 'search':
       return g.say(c.noun ? `You search the ${n} thoroughly and find nothing of interest.` : 'You poke around but find nothing new.');
-    case 'read':
+    case 'read': {
+      const hs = c.noun ? g.hotspot(c.noun) : undefined;
+      if (hs?.look) {
+        if (typeof hs.look === 'string') return g.say(hs.look);
+        const out = await hs.look(g);
+        if (typeof out === 'string') return g.say(out);
+        return;
+      }
+      if (c.noun && g.has(c.noun)) return g.examine(c.noun);
       return g.say(c.noun ? `There's nothing on the ${n} worth reading.` : 'Read what?');
+    }
     case 'take':
       if (c.noun && g.has(c.noun)) return g.say('You already have it.');
       if (person) return g.say(`${n} is not something you can put in your pocket. Not without an HR investigation.`);
@@ -177,7 +278,8 @@ export async function fallback(g: Game, c: Command) {
       if (c.verb === 'break' && !c.noun) return g.say('Break what? Breaking things is how we got into this mess in the first place.');
       return g.say(person ? `Assaulting ${n} would get you fired, arrested, and featured in a very awkward all-hands meeting.` : 'Violence is never the answer. Well, almost never. Not now, anyway.');
     case 'throw':
-      return g.say(c.noun && g.has(c.noun) ? "You'd better not throw that around. You might need it." : 'Throw what?');
+      if (c.noun && !g.has(c.noun)) return g.say(`You don't have ${aOr(n)}.`);
+      return g.say(c.noun ? "You'd better not throw that around. You might need it." : 'Throw what?');
     case 'climb':
       return g.say("You're a software engineer, not a mountaineer.");
     case 'jump':
@@ -298,7 +400,22 @@ export async function fallback(g: Game, c: Command) {
     case 'sudo':
       return g.say('Dominic is not in the sudoers file. This incident will be reported.');
     case 'help':
+      if (c.noun && person) {
+        const t = g.synth('talk', c.noun);
+        if (await g.dispatch(t)) return;
+        return g.say(`${n} appreciates the offer, but what they really need is for production to come back up.`);
+      }
       return g.hooks.help(g);
+    case 'make':
+      return g.say(c.noun ? `You don't have what you'd need to make ${aOr(n)} here.` : 'Make what?');
+    case 'lift':
+      return g.say(c.noun ? (person ? `${n} would rather keep both feet on the ground.` : `You lift the ${n} a little. Nothing underneath. You put it back.`) : 'Lift what?');
+    case 'water':
+      return g.say("You don't have any water. Or a watering can. Or, frankly, the time.");
+    case 'charge':
+      return g.say(g.has('powerbank') ? 'You could, but production is down. Your phone can wait; the Monolith cannot.' : "Your phone is dead and you have nothing to charge it with. Classic Friday.");
+    case 'squeeze':
+      return g.say(c.noun ? (person ? `${n} gives you a look that says "personal space."` : `You squeeze the ${n}. It does not squeak. Disappointing.`) : 'Squeeze what?');
     case 'score':
       return g.say(`Your score is ${g.state.score} out of 256. You have made ${g.state.moves} moves and died ${g.state.deaths} time${g.state.deaths === 1 ? '' : 's'}.`);
     case 'version':
@@ -314,8 +431,14 @@ export async function fallback(g: Game, c: Command) {
   }
 }
 
+function displayWord(id: string | null, word: string | null): string {
+  const w = word ?? id ?? 'that';
+  if (id && ANIMATE.has(id)) return w.replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return w;
+}
+
 function aOr(n: string) {
-  return /^[aeiou]/i.test(n) ? `an ${n}` : `a ${n}`;
+  return /^"?[aeiou]/i.test(n) ? `an ${n}` : `a ${n}`;
 }
 function cap(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1);
