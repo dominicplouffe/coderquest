@@ -186,6 +186,12 @@ export class Game {
     this.buildMenus();
     this.bindInput();
     window.addEventListener('resize', () => this.resize());
+    document.addEventListener('visibilitychange', () => {
+      const ctx = this.audio.ctx;
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend();
+      else ctx.resume();
+    });
     this.resize();
   }
 
