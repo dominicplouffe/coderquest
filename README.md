@@ -51,8 +51,9 @@ npm run build      # -> dist/index.html (self-contained)
 ```
 
 ### Option 4 — GitHub Pages
-The repo includes a workflow (`.github/workflows/pages.yml`) that publishes the game on every
-push to `main`. Enable it once under **Settings → Pages → Source: GitHub Actions**.
+`docs/github-workflows/pages.yml` publishes the game on every push to `main`. To enable it, copy
+it to `.github/workflows/pages.yml` and set **Settings → Pages → Source: GitHub Actions**.
+(`docs/github-workflows/ci.yml` is a matching build check.)
 
 ## How to play
 
