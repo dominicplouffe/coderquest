@@ -728,7 +728,7 @@ export const deadlock: RoomDef = {
   hotspots: [
     {
       id: 'wall',
-      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'back wall', 'steel', 'arch', 'arches', 'pipe', 'pipes', 'mutex co', 'mutex and co', 'mutex & co', 'est 1987', 'makers plate', 'rivets', 'wall'],
+      nouns: ['giant padlock', 'big padlock', 'padlock wall', 'shackle', 'vault', 'back wall', 'steel', 'arch', 'arches', 'pipe', 'pipes', 'mutex co', 'mutex and co', 'mutex & co', 'mutex sign', 'mutex and co sign', 'est 1987', 'makers plate', 'rivets', 'wall'],
       area: [66, 0, 188, 108],
       look: "The back wall of the chamber is one titanic padlock: a steel shackle arching up into the dark, rivets the size of your fist, and a maker's plate reading MUTEX & CO 1987. Its keyhole is big enough to stand in. Somebody did, and put a cage there.",
     },

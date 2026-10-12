@@ -202,9 +202,9 @@ function paint(p: Surface, g: Game) {
       p.plot(gx, gt + k, 8);
       p.plot(gx + NW - 1, gt + k, 8);
     }
-    // MIND THE GAP, painted on the decks either side
-    p.micro(GAP_X1 + 3, nodeTop(MISSING + 1) + 3, 'MIND THE', 14);
-    p.micro(nodeX(MISSING - 1) + 9, nodeTop(MISSING - 1) + 3, 'GAP', 14);
+    // MIND THE GAP, painted on the decks either side (reads left to right across the gap)
+    p.micro(nodeX(MISSING - 1) + 2, nodeTop(MISSING - 1) + 3, 'MIND THE', 14);
+    p.micro(GAP_X1 + 11, nodeTop(MISSING + 1) + 3, 'GAP', 14);
   }
 
   // build the mask of untouched void pixels
@@ -406,7 +406,7 @@ export const bridge: RoomDef = {
   nouns: {
     zeros: ['zeros', 'zeroes', 'zero', 'falling zeros', 'rain'],
     labels: ['head', 'head node', 'tail', 'tail node', 'cafe', 'beef', 'food', 'f00d', 'dead', 'c0de', 'data', 'data fields', 'labels', 'hex'],
-    orphans: ['debris', 'orphans', 'orphaned objects', 'undefined', 'nan', 'floating text', 'object object', 'words', 'text', 'ptr', '0xdeadbeef', 'deadbeef', 'void ptr'],
+    orphans: ['debris', 'orphans', 'orphaned objects', 'undefined', 'nan', 'floating text', 'object object', 'words', 'text', 'ptr', '0xdeadbeef', 'deadbeef', 'void ptr', 'todo', 'nil', 'void star', 'floating words'],
   },
   hotspots: [
     {

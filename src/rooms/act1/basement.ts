@@ -627,7 +627,17 @@ export const basement: RoomDef = {
   raw: async (g, text) => {
     if (await act1Raw(g, text)) return true;
     const t = text.toLowerCase();
-    if (g.flag('door_open')) return false;
+    if (g.flag('door_open')) {
+      // saying the password again once the door is already open
+      if (/gertrude|gertie|gerty/.test(t)) {
+        const pc = parse(text);
+        if (!pc.verb || ['say', 'tell', 'answer', 'type', 'call'].includes(pc.verb)) {
+          await g.say('The door is already open. Denis heard you the first time. So, probably, did Gertrude.');
+          return true;
+        }
+      }
+      return false;
+    }
     if (/gertrude|gertie|gerty/.test(t)) {
       // LOOK AT GERTRUDE, READ GERTRUDE etc. mean the photo, not the password
       const pc = parse(text);
@@ -753,6 +763,12 @@ export const basement: RoomDef = {
     'turnon|reset aux': async (g) => breaker(g, 3, true),
     'look|read aux': (g) => g.say(`Breaker 3, labeled BASEMENT AUX in Denis's handwriting.${safe(g) ? ' It is off.' : ''}`),
     'turnoff|flip|throw|push|pull|turn|cut vendbreaker': async (g) => breaker(g, 2, false),
+    // "enter door" / "go through the door" once Denis has opened it
+    'go|enter door': async (g) => {
+      if (!g.flag('door_open')) return false;
+      await g.walk(null, DOOR.x + 16, WB + 2);
+      await g.walk(null, DOOR.x + 16, WB);
+    },
     'go|enter puddle': async (g) => {
       // walking THROUGH it, not just up to it
       const fromEast = g.player.x > 200;

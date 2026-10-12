@@ -9,7 +9,13 @@ const pick = <T>(a: T[]): T => a[Math.floor(Math.random() * a.length)];
 function nounName(g: Game, c: Command, which: 1 | 2 = 1): string {
   const id = which === 1 ? c.noun : c.noun2;
   const word = which === 1 ? c.nounWord : c.noun2Word;
-  if (id && g.items[id] && g.has(id)) return g.items[id].name.toLowerCase().replace(/^your /, '');
+  if (id && g.items[id] && g.has(id))
+    // keep acronyms and possessives: "NDI helmet", "BREAK! bar", "COBOL manual", "Adriana's patch"
+    return g.items[id].name
+      .replace(/^Your /, '')
+      .split(' ')
+      .map((w) => (/^[A-Z0-9][A-Z0-9!-]+$/.test(w) || /'s$/.test(w) ? w : w.toLowerCase()))
+      .join(' ');
   const a = id ? g.actor(id) : null;
   if (a) return a.name;
   return word ?? id ?? 'that';
@@ -218,6 +224,7 @@ export async function fallback(g: Game, c: Command) {
       }
       if (c.noun === 'self') return g.say('Talking to yourself? Maybe you should talk to your duck instead. It\'s a better listener.');
       if (person) return g.say(`${n} doesn't seem to have anything else to say right now.`);
+      if (c.noun && ANIMATE.has(c.noun)) return g.say(`${displayWord(c.noun, c.nounWord)} isn't here.`);
       return g.say(pick([`The ${n} doesn't respond. Most things don't.`, `You strike up a conversation with the ${n}. It's a better listener than most of your coworkers, but a worse talker.`]));
     case 'ask':
     case 'tell':
@@ -332,6 +339,24 @@ export async function fallback(g: Game, c: Command) {
         return g.say('Which way? Walk to an exit, or try a direction like GO NORTH.');
       }
       if (c.noun && g.hotspot(c.noun)) {
+        // a door/opening that sits on an open exit: go through it
+        const hs = g.hotspot(c.noun)!;
+        const box = (a: number[]) => {
+          if (a.length === 4) return a;
+          const xs = a.filter((_, i) => i % 2 === 0),
+            ys = a.filter((_, i) => i % 2 === 1);
+          return [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
+        };
+        const hb = box(hs.area);
+        const ex = (g.room?.exits ?? []).find((e) => {
+          if (e.when && !e.when(g)) return false;
+          const eb = box(e.area);
+          return hb[0] < eb[0] + eb[2] + 4 && eb[0] < hb[0] + hb[2] + 4 && hb[1] < eb[1] + eb[3] + 4 && eb[1] < hb[1] + hb[3] + 4;
+        });
+        if (ex && ['enter', 'go'].includes(c.verb ?? '') && (c.verb === 'enter' || c.prep === 'through' || c.prep === 'in' || /door|doorway|gate|portal|arch|opening|entrance|exit/.test(c.nounWord ?? ''))) {
+          await takeExit(g, ex);
+          return;
+        }
         await g.approach(c.noun);
         return;
       }

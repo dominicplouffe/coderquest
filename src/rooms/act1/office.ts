@@ -592,7 +592,7 @@ export const office: RoomDef = {
     },
     {
       id: 'mikedesk',
-      nouns: ['mikes desk', 'mike desk', 'sales desk', 'sales corner', 'nameplate', 'business cards', 'cards'],
+      nouns: ['mikes desk', 'mike desk', 'sales desk', 'sales corner', 'nameplate', 'business cards', 'cards', 'business card', 'card', 'mikes card'],
       area: [234, 96, 54, 26],
       at: [246, 128],
       look: (g) =>
@@ -609,14 +609,14 @@ export const office: RoomDef = {
     },
     {
       id: 'deskphone',
-      nouns: ['desk phone', 'telephone', 'mikes phone', 'message light', 'voicemail'],
+      nouns: ['desk phone', 'telephone', 'mikes phone', 'message light', 'voicemail', 'voicemails', 'message', 'messages'],
       area: [238, 92, 11, 7],
       at: [246, 128],
       look: 'A desk phone. The message light is blinking: 37 new voicemails. All of them start with "Hey Mike, quick question about the demo..."',
     },
     {
       id: 'phildoor',
-      nouns: ['phils door', 'phil door', 'ceo door', 'ceos office', 'phils office', 'corner office', 'office door', 'brass plate', 'oak door'],
+      nouns: ['phils door', 'phil door', 'ceo door', 'ceos office', 'phils office', 'corner office', 'office door', 'brass plate', 'oak door', 'plaque', 'brass plaque', 'door plate'],
       area: [3, 60, 26, 64],
       at: [16, 132],
       look: "A heavy oak door with a brass plate: PHIL - CEO. It's standing ajar, spilling sunset light across the carpet. From inside you can hear Phil on the phone, using the word \"synergy\" defensively.",
@@ -829,6 +829,7 @@ export const office: RoomDef = {
         ['nicholas', "IT'S IN THE MIDDLE. Dominic, it's in the MIDDLE! Look at it! Look at my beautiful div! I'm framing this note. I'm going to be buried with this note."],
         ['nicholas', 'I owe you. Here. Take the Rainbow Warrior. It\'s my spare.'],
         ['nicholas', "Take it. I have thirty-seven more. It's got a battery that lasts a month and enough LEDs to land a plane."],
+        ['nicholas', "Oh, the ESC keycap's a little loose. Pry it off if it rattles. Honestly, on a night like this, everybody could use an escape key."],
       ]);
       award(g, 'give_note_nick');
       g.addItem('keyboard');
@@ -850,6 +851,15 @@ export const office: RoomDef = {
       if (g.flag('nick_helped')) return void (await g.say("The div is already centered. It's a rare and beautiful sight. Don't touch it."));
       if (g.has('note')) return void (await g.say("You could explain it again, but you already wrote it down. Just give Nicholas the note."));
       await g.say("You know the answer, of course. You've explained it to Nicholas about forty times. In fact, you got so tired of explaining it that you wrote it down once. Where did you put that note...?");
+    },
+    // LOOK AT KEYBOARD in a room full of them: the shrine, until you're carrying the Rainbow Warrior
+    'look keyboard': async (g) => {
+      if (g.has('keyboard')) return false;
+      await g.say("Keyboards. Dozens of them, all Nicholas's. Linear switches, tactile switches, clicky switches, and one that appears to be carved from a single piece of walnut. Each one has a name. You suspect most of them have never typed a single semicolon.");
+    },
+    'take mikedesk': async (g, c) => {
+      if (!/card/.test(c.nounWord ?? '')) return false;
+      await g.say('You take one of Mike\'s business cards: MIKE, SALES. "Let\'s synergize!" On the back, in pen: "Ask me about the demo!!" You put it back. You know where to find him.');
     },
     'take keyboard|keyboards|kbstand,take kbboxes,open kbboxes': async (g, c) => {
       if (g.has('keyboard') && c.noun === 'keyboard') return false;

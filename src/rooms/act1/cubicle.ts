@@ -207,7 +207,8 @@ export const cubicle: RoomDef = {
     [38, 152, 64, 121, 256, 121, 282, 152],
   ],
   blocks: [[146, 124, 26, 12]],
-  look: "Your cubicle. Your home away from home, and lately, your home. A desk, a monitor, a chair, a succulent named Kevin, and the ever-present hum of fluorescent lights. Through the far windows, the sun is setting on what was supposed to be a long weekend.",
+  look: (g) =>
+    `Your cubicle. Your home away from home, and lately, your home. A desk, a monitor, a chair, a succulent named Kevin${g.flag('badge_taken') ? '' : ', your ID badge on its hook'}, and the ever-present hum of fluorescent lights. Through the far windows, the sun is setting on what was supposed to be a long weekend.\n\nThe aisle out to the open office runs off to the right.`,
   hotspots: [
     { id: 'desk', nouns: ['desk', 'table', 'desktop', 'my desk'], area: [62, 98, 197, 20], at: [120, 126], look: 'Your desk: a battlefield of cables, sticky notes, and a keyboard that has survived four reorganizations. There is a drawer on the right side.' },
     { id: 'papers', nouns: ['papers', 'paper', 'paperwork', 'documents', 'printouts'], area: [111, 93, 16, 5], at: [120, 126], look: 'A stack of printouts: last sprint\'s retro notes. Action item one: "Never deploy on a Friday." Action item two: "See action item one."' },
@@ -236,6 +237,7 @@ export const cubicle: RoomDef = {
     { id: 'calendar', nouns: ['calendar', 'date'], area: [231, 85, 16, 15], at: [238, 128], look: "Your calendar. Today is Friday. Circled in red: 'LONG WEEKEND!!!' The red circle is starting to feel ironic." },
     { id: 'hook', nouns: ['hook', 'coat hook', 'peg'], area: [40, 84, 10, 6], at: [62, 140], look: (g) => (g.flag('badge_taken') ? 'An empty coat hook.' : 'A coat hook on the cubicle wall. Your ID badge is hanging from it on its lanyard.') },
     { id: 'badge', nouns: ['badge', 'id badge', 'id', 'lanyard', 'id card'], area: [40, 87, 11, 16], at: [62, 140], when: (g) => !g.flag('badge_taken'), look: 'Your employee ID badge, hanging on its lanyard. It opens most doors on this floor, assuming the building still believes in you.' },
+    { id: 'nameplate', nouns: ['nameplate', 'name plate', 'name', 'name sign', 'sign', 'plate', 'label'], area: [270, 95, 18, 9], at: [268, 150], look: 'A nameplate on the cubicle wall: DOM. Facilities charges by the letter, and the budget ran out at three. Only Mike actually calls you that.' },
     { id: 'chair', nouns: ['chair', 'office chair', 'seat'], area: [148, 105, 22, 30], at: [159, 142], look: 'Your ergonomic office chair. Its ergonomics expired around the same time as the granola bar.' },
     { id: 'window', nouns: ['window', 'windows', 'skyline', 'city', 'sunset', 'sky'], area: [12, 14, 296, 42], look: 'Over the partitions, through the far windows, the sun sets over the city. Everyone else is heading home for the weekend.' },
     { id: 'cubicles', nouns: ['cubicles', 'other cubicles', 'cubicle farm', 'office'], area: [0, 56, 320, 26], look: (g) => (g.flag('intro_alert') ? 'Row after row of cubicles, every monitor glowing the same alarming red.' : 'Row after row of cubicles stretch into the distance. Most of them are already empty for the weekend.') },
@@ -363,7 +365,12 @@ export const cubicle: RoomDef = {
       ),
     'turnon|turnoff|fix|reboot light,use light': 'The lights are wired into the building management system, which runs on, you guessed it, the Monolith. The desk lamp is the only light you control, and it has opinions.',
     'look cables,look/under desk,search cables': 'Under your desk: a tangle of cables, a lost sock, and the shame of a thousand dropped snacks. One cable connects to nothing at all. You are afraid to unplug it.',
-    'take|pull|unplug cables': "You've learned the hard way never to pull a mystery cable. Last time, the printer on the fourth floor caught fire.",
+    'take|pull|unplug cables': async (g, c) =>
+      g.say(
+        /sock/.test(c.nounWord ?? '')
+          ? 'You leave the sock where it is. It has lived under there since the last reorg, and it has made a life for itself.'
+          : "You've learned the hard way never to pull a mystery cable. Last time, the printer on the fourth floor caught fire.",
+      ),
     'look aisle': 'The aisle runs off to the right, out to the open office.',
     'look|talk|search|comfort|tap aidan,ask|tell aidan ?': async (g) => {
       if (g.actor('aidan')) return false;

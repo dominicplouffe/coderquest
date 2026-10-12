@@ -963,7 +963,10 @@ export const breakroom: RoomDef = {
           : 'Mike went back to his desk in the open office, a happy man.',
       ),
     'talk mike,ask mike ?,tell mike ?,say mike,hello mike,help mike': async (g, c) => {
-      if (!g.actor('mike')) return false;
+      if (!g.actor('mike')) {
+        if (!g.flag('candy_bought')) return false;
+        return void (await g.say("Mike's gone back to his desk in the open office, BREAK! bar in hand, to tell Gary that everything is fine. You can catch him there."));
+      }
       if (c.noun2 === 'powerbank' && g.flag('br_mike_talked')) return false;
       await g.approach(g.actor('mike')!);
       if (!g.flag('br_mike_talked')) {
@@ -1033,6 +1036,15 @@ export const breakroom: RoomDef = {
         g.redraw();
       }
       await g.say("Inside the fridge: Mike's sandwich (\"DO NOT EAT. I KNOW WHO YOU ARE.\"), expired oat milk, eleven meal-prep boxes that all say \"CHICKEN + RICE (DAY 3)\", and a ketchup packet. Nothing you need. Probably nothing anyone needs.");
+    },
+    // "look at magnets" names the fridge hotspot; with the door open, show them the door, not the shelves
+    'look fridge,read fridge': async (g, c) => {
+      if (!/magnet|menu/.test(c.nounWord ?? '') || !g.flag('br_fridge_open')) return false;
+      await g.approach('fridge');
+      g.set('br_fridge_open', false);
+      g.sfx('door');
+      g.redraw();
+      await g.say('You swing the fridge door closed to see the magnets. A pizza place, a dentist, a takeout menu from 2016, and one white magnet with a little light bulb on it and a joke printed underneath.');
     },
     'read magnet,look magnet,read joke': async (g) => {
       await g.approach('fridge');

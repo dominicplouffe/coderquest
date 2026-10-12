@@ -139,7 +139,7 @@ async function gcCollect(g: Game) {
   }
   say(g, 'MEMORY FREED', 200);
   await g.wait(700);
-  await g.die("The Garbage Collector's claw closes around you, and with a businesslike CLANK you are swept into the can.\n\nYou have been garbage collected. Your memory has been freed. Somewhere, a heap graph dips by exactly one senior engineer.", { title: 'Memory Freed' });
+  await g.die("The Garbage Collector's claw closes around you, and with a businesslike CLANK you are swept into the can.\n\nNothing pointed to you, so you have been garbage collected. Somewhere, a heap graph dips by exactly one senior engineer. Next time, bring something with your name on it.", { title: 'Memory Freed' });
 }
 
 function tick(g: Game) {

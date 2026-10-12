@@ -316,13 +316,13 @@ async function wakeScene(g: Game) {
   await g.walk(ad, CHAIR_A - 2, CHAIR_Y + 16, { direct: true });
   ad.dir = 'down';
   await g.pose(ad, 'cheer', 700);
-  await g.talk(ad, "Four hours in a deadlock. My back thinks it's 1987.");
+  await g.talk(ad, "Three hours in a deadlock. My back thinks it's 1987.");
   // Denis comes over
   d.dir = 'right';
   await g.walk(d, 150, CHAIR_Y + 12, { direct: true });
   d.faceToward(p.x, p.y);
   await convo(g, [
-    ['denis', "You're back. BOTH of you. Do you know what time it is? Four hours you've been sitting there twitching."],
+    ['denis', "You're back. BOTH of you. Do you know what time it is? Five and a half hours you've been sitting there twitching. Her, nearly nine."],
     ['denis', "Well? Don't keep an old man waiting. What WAS it? What's been eating my Monolith?"],
   ]);
   await standFromChairB(g);
@@ -699,7 +699,7 @@ export const serverroom: RoomDef = {
       at: [CHAIR_B + 1, CHAIR_Y + 12],
       look: (g) =>
         act3(g)
-          ? 'The chair you just spent four hours in. It has a you-shaped dent in it now.'
+          ? 'The chair you just spent five and a half hours in. It has a you-shaped dent in it now.'
           : g.flag('helmet_connected')
             ? 'The empty chair next to Adriana. The new cable runs from the Monolith\'s port to the helmet in your hands, and the chair is waiting. It looks a lot like a dentist\'s chair, if your dentist were a mainframe.'
             : 'An empty chair next to Adriana\'s, facing out from the Monolith. It looks like it has been waiting for someone.',
@@ -720,7 +720,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'shirt',
-      nouns: ['shirt', 't shirt', 'tshirt', 'frame', 'y2k shirt', 'survivor', 'y2k survivor'],
+      nouns: ['shirt', 't shirt', 'tshirt', 'frame', 'y2k shirt', 'survivor', 'y2k survivor', 'poster', 'y2k poster', 'framed shirt', 'framed t shirt'],
       area: [30, 27, 23, 33],
       at: [42, 124],
       look: 'A framed T-shirt: "Y2K SURVIVOR". It is signed, in marker: "To Denis. Great job. - Denis".',
@@ -741,7 +741,7 @@ export const serverroom: RoomDef = {
     },
     {
       id: 'door',
-      nouns: ['door', 'steel door', 'vault door', 'wheel', 'fire sign', 'halon', 'halon sign'],
+      nouns: ['door', 'steel door', 'vault door', 'wheel', 'fire sign', 'halon', 'halon sign', 'sign', 'red sign', 'fire run', 'fire run sign', 'run sign', 'warning sign'],
       area: [0, 48, 22, 136],
       at: [14, 166],
       look: 'The inside of the vault door back to the basement corridor, with a locking wheel. Next to it, a red sign: "IN CASE OF FIRE: HALON SYSTEM WILL DISCHARGE. ALSO, RUN."',
@@ -860,7 +860,7 @@ export const serverroom: RoomDef = {
     'attack|kick denis': 'Denis has survived Y2K, three reorgs, and the 1993 Token Ring incident. You are not going to be the thing that takes him down.',
     // ---- Adriana
     'look adriana': async (g) => {
-      if (act3(g)) return void (await g.say('Adriana, awake and very much herself again: magenta blazer, sharp eyes, and the faint impatience of an architect who has just spent four hours in a deadlock and would like to get on with it.'));
+      if (act3(g)) return void (await g.say('Adriana, awake and very much herself again: magenta blazer, sharp eyes, and the faint impatience of an architect who has just spent three hours in a deadlock and would like to get on with it.'));
       await g.say("Adriana, the lead architect, slumped in the chair. She's wearing the v1 prototype helmet: a chunky silver thing held together with duct tape, its cable running into the Monolith. She's breathing slow and steady, eyes closed behind the visor, and smiling faintly, like she's found something interesting in there.\n\nShe does not respond to anything.");
     },
     'talk adriana,ask adriana ?,tell adriana ?': async (g, c) => {
@@ -875,7 +875,7 @@ export const serverroom: RoomDef = {
       await g.say('You say her name. Nothing. Then, very softly, Adriana mumbles:\n\n"...no, YOU let go first..."\n\nAnd she goes quiet again.');
     },
     'wake|shake|tap|push|pull|attack|touch adriana,remove|take adrianashelmet,unplug|remove|take|pull helmet adriana,unplug adriana': async (g, c) => {
-      if (act3(g)) return void (await g.talk('adriana', c.verb === 'attack' ? 'Try it and I reject your pull request. Forever.' : "I'm awake, I'm awake. Four hours in a deadlock will do that to a person."));
+      if (act3(g)) return void (await g.talk('adriana', c.verb === 'attack' ? 'Try it and I reject your pull request. Forever.' : "I'm awake, I'm awake. Three hours in a deadlock will do that to a person."));
       if (g.actor('denis')) {
         await g.talk('denis', "DON'T! Pull her out mid-session and her brain gets garbage collected!");
         await g.say('You back away from Adriana. Slowly.');

@@ -391,7 +391,7 @@ export const lab: RoomDef = {
     },
     {
       id: 'vitals',
-      nouns: ['vitals', 'vitals monitor', 'heart monitor', 'heart rate', 'adrianas vitals', 'ekg', 'ecg'],
+      nouns: ['vitals', 'vitals monitor', 'heart monitor', 'heart rate', 'adrianas vitals', 'ekg', 'ecg', 'wall monitor', 'monitor on wall', 'wall screen', 'screen on wall', 'adriana monitor'],
       area: [225, 21, 50, 32],
       at: [248, 118],
       look: "A monitor on the wall labeled ADRIANA. A steady green heartbeat trace, and the words VITALS OK. Krishna's been watching it like a hawk. Wherever Adriana is right now, her body is fine. It's the rest of her that's somewhere else.",
@@ -513,6 +513,10 @@ export const lab: RoomDef = {
   nouns: { ...BASE_NOUNS, ...itemNouns(['powerbank', 'phone', 'esckey', 'candy', 'coffee', 'duck', 'keycard', 'badge']), ...COMPUTER_NOUNS, stool: ['stool', 'chair', 'seat'], krishna: ['krishna', 'guy', 'man', 'dude', 'scientist', 'lab coat', 'person', 'someone', 'somebody', 'researcher', 'engineer', 'doctor', 'doc'] },
   raw: (g, text) => act1Raw(g, text),
   verbs: {
+    'look mug|coffee,look/in mug|coffee': async (g, c) => {
+      if (g.has('mug') || g.has('coffee') || !/mug|cup/.test(c.nounWord ?? '')) return false;
+      await g.say('Krishna\'s mug, on the bench: PhD, in big serious letters. It holds cold tea, two resistors and a soldering iron tip. Science is thirsty work.');
+    },
     'look krishna': async (g) =>
       g.say(
         "Krishna: R&D genius, glasses, crisp white lab coat with seven pens in the pocket. He has the delighted, slightly unhinged look of a man whose experiment is about to get its first real test. You suspect you are the experiment.",
