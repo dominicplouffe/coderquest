@@ -52,7 +52,12 @@ export const ITEMS: ItemDef[] = [
       s.plot(10, 16, 8);
     }),
     verbs: {
-      'call|use|turnon phone,call ?': 'You stab at the power button. The screen flashes a tiny red battery icon and dies. You really need to start charging this thing at night.',
+      'call|use|turnon phone,call ?': async (g, c) => {
+        // "ring the doorbell", "call the elevator": that's the room's business, not the phone's
+        if (c.verb === 'call' && c.noun && c.noun !== 'phone' && g.hotspot(c.noun)) return false;
+        await g.say('You stab at the power button. The screen flashes a tiny red battery icon and dies. You really need to start charging this thing at night.');
+      },
+      'read phone,look/at phone messages,search phone': 'The screen stays black. Whatever messages are waiting on there will have to keep waiting. Battery: 0%.',
       'plug phone powerbank,put phone powerbank,use powerbank phone': "You plug your phone into the power bank. 1%... 2%... You don't have time to wait for a full charge. Production is down!",
     },
   },
@@ -75,7 +80,7 @@ export const ITEMS: ItemDef[] = [
       s.hline(4, 14, 17, dith(14, 6, 8));
     }),
     verbs: {
-      'talk duck,explain ?,explain * duck,ask duck ?,hint,tell duck ?,show * duck': async (g) => {
+      'talk duck,use duck,explain ?,explain * duck,ask duck ?,hint,tell duck ?,show * duck': async (g) => {
         await duckHint(g);
       },
       'touch|push|hug duck,squeeze duck': async (g) => {
@@ -95,6 +100,14 @@ export const ITEMS: ItemDef[] = [
     icon: icon((s) => drawMug(s, false)),
     verbs: {
       'drink mug': "It's empty. You lick the rim, briefly considering your life choices.",
+      'fill mug,use mug': async (g) => {
+        if (g.room?.id === 'breakroom') return false;
+        await g.say(
+          g.flag('coffee_rebooted')
+            ? 'Your mug wants coffee, and the only working coffee machine is in the break room, off the elevator lobby.'
+            : "Your mug wants coffee. The coffee machine is in the break room, off the elevator lobby. Last you heard, it thinks it's a teapot.",
+        );
+      },
     },
   },
   {
@@ -165,7 +178,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: 'keyboard',
     name: 'RGB Keyboard',
-    nouns: ['keyboard', 'rgb keyboard', 'mechanical keyboard', 'rainbow warrior', 'spare keyboard', 'rgb', 'lights', 'keeb'],
+    nouns: ['keyboard', 'rgb keyboard', 'mechanical keyboard', 'rainbow warrior', 'spare keyboard', 'rgb', 'keeb', 'wireless keyboard', 'rgb lights', 'keyboard lights'],
     look: (g) => {
       let t = "Nicholas's spare mechanical keyboard, the 'Rainbow Warrior'. It has more LEDs than a Christmas tree and a battery that lasts a month.";
       if (g.flag('keyboard_on')) t += ' It is blazing in every color of the rainbow.';
@@ -347,7 +360,7 @@ export const ITEMS: ItemDef[] = [
   {
     id: 'manual',
     name: 'COBOL Manual',
-    nouns: ['manual', 'cobol manual', 'book', 'cobol book', 'reference', 'reference manual', 'cobol'],
+    nouns: ['manual', 'cobol manual', 'book', 'cobol book', 'reference', 'reference manual', 'cobol', 'documentation', 'docs', 'cobol documentation', 'cobol docs'],
     look: '"COBOL-85 Reference Manual, Volume 1 of 7." 1,200 pages of the most soporific prose ever committed to paper. Denis has annotated it in three colors of ink.',
     icon: icon((s) => {
       s.rect(3, 3, 13, 15, 2);
@@ -358,7 +371,7 @@ export const ITEMS: ItemDef[] = [
       s.hline(3, 17, 18, 0);
     }),
     verbs: {
-      'read manual': async (g) => {
+      'read|open manual': async (g) => {
         if (g.room?.id === 'dragon') return false;
         await g.say('You open to a random page. "PERFORM VARYING WS-IDX FROM 1 BY 1 UNTIL WS-IDX > WS-MAX..." Your eyelids grow heavy. Your head droops. You snap awake. This book is a weapon.');
       },

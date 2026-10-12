@@ -296,10 +296,7 @@ function drawFigure(L: Look, P: Pose): Img {
     const aL = CX - 5 - bw,
       aR = CX + 4 + bw;
     if (P.armsUp) {
-      p.rect(aL, ty - 7, 2, 8, sleeveC);
-      p.rect(aR, ty - 7, 2, 8, sleeveC);
-      p.rect(aL, ty - 9, 2, 2, L.skin);
-      p.rect(aR, ty - 9, 2, 2, L.skin);
+      // drawn after the head (below) so hair and beards can't hide them
     } else if (P.reach) {
       p.rect(aL, ty + 1, 2, 8, sleeveC);
       p.rect(aL, ty + 9, 2, 2, L.skin);
@@ -371,6 +368,17 @@ function drawFigure(L: Look, P: Pose): Img {
       p.px(CX, top - 2, c);
       p.px(CX + 3, top - 2, c);
       if (!back) p.px(CX, top - 1, 12);
+    }
+    if (P.armsUp) {
+      // a big V: shoulders out and up past the head
+      const sl = CX - 4 - bw,
+        sr = CX + 4 + bw;
+      p.line(sl, ty + 1, sl - 3, ty - 6, sleeveC, 2);
+      p.line(sr, ty + 1, sr + 3, ty - 6, sleeveC, 2);
+      p.line(sl - 1, ty + 2, sl - 4, ty - 5, sleeveS, 1);
+      p.line(sr + 2, ty + 2, sr + 5, ty - 5, sleeveS, 1);
+      p.rect(sl - 4, ty - 9, 2, 3, L.skin);
+      p.rect(sr + 3, ty - 9, 2, 3, L.skin);
     }
   } else {
     // ------------------------------------------------------------ side view (facing right)

@@ -1,7 +1,8 @@
 // Global easter eggs and commands that work anywhere.
 import type { Game } from '../engine/game';
 import type { Response } from '../engine/types';
-import { normalize } from '../engine/parser';
+import { normalize, parse, ANIMATE } from '../engine/parser';
+import { roomFromWords, travelTo } from './defaults';
 
 const PATHS: Record<string, string> = {
   cubicle: '/hq/3f/cubicles/dominic',
@@ -30,10 +31,56 @@ async function said(g: Game, text: string): Promise<boolean> {
   return true;
 }
 
+/** Re-run a rewritten command through the normal dispatch. */
+async function rerun(g: Game, text: string): Promise<boolean> {
+  const c = parse(text, g.localNouns);
+  g.resolveItemNouns(c);
+  if (c.verb === 'look' && !c.noun && c.unknown) {
+    if (/monad/.test(text)) return said(g, "A monad is just a monoid in the category of endofunctors. What's the problem?");
+    return said(g, `You don't see any "${c.unknown}" here, and you're honestly not sure what one is.`);
+  }
+  if (!(await g.dispatch(c))) await g.hooks.fallback(g, c);
+  return true;
+}
+
 export async function globalRaw(g: Game, raw: string): Promise<boolean> {
   const t = raw.trim().toLowerCase();
   const n = normalize(raw);
   const act = g.flag('act') ?? 1;
+  // natural questions people type
+  if (/^(where am i|where is this|what is this place|whats this place|where are we)$/.test(n)) {
+    await g.say(`You're in ${g.room?.title ?? 'a mysterious place'}.`);
+    return rerun(g, 'look');
+  }
+  if (/^(who am i|what am i)$/.test(n)) return rerun(g, 'look self');
+  // "go to the break room", "walk back to the office", "enter the lab", "take the stairs"
+  let mt = /^(?:go|walk|head|run|return|travel|move|get|hurry|wander|stroll|proceed)(?: back)?(?: (?:to|into|in to|toward|towards|over to|down to|up to))(?: the)? (.+)$/.exec(n) ?? /^(?:enter|visit|take)(?: the)? (.+)$/.exec(n);
+  if (mt) {
+    const target = roomFromWords(mt[1]);
+    if (target && target !== g.room?.id && (await travelTo(g, target))) return true;
+  }
+  // "where is the jar", "where's fahim"
+  mt = /^where (?:is|are|s|did i put|can i find)(?: the| my| a| an)? (.+)$/.exec(n) ?? /^wheres(?: the| my)? (.+)$/.exec(n);
+  if (mt) {
+    const c = parse(`look ${mt[1]}`, g.localNouns);
+    g.resolveItemNouns(c);
+    if (c.noun && g.has(c.noun)) return said(g, `You're carrying it. (Press TAB to see your inventory.)`);
+    if (c.noun && g.present(c.noun)) return rerun(g, `look ${mt[1]}`);
+    if (c.noun && ANIMATE.has(c.noun)) return said(g, `You're not sure where ${c.nounWord} is right now. Not here, anyway.`);
+    const room = roomFromWords(mt[1]);
+    if (room) return said(g, room === g.room?.id ? "You're standing in it." : 'You could try GO TO ' + mt[1].toUpperCase() + '.');
+    return said(g, "You don't see one around here.");
+  }
+  if (/^(what now|now what|what next|what should i do|what do i do|what do i do now|what should i do now|i am lost|im lost|i dont know what to do|any ideas|idea|ideas)$/.test(n))
+    return said(g, g.has('duck') ? "When in doubt, LOOK at everything. And when that fails: TALK TO DUCK. It's what it's there for." : 'When in doubt, LOOK at everything. Your desk drawer might hold something helpful, too.');
+  let m = /^(?:what|whats) (?:is |are )?(?:this |that |the |a |an )?(.+)$/.exec(n);
+  if (m && !/^(this place|now|next|up)$/.test(m[1])) return rerun(g, `look ${m[1]}`);
+  m = /^(?:who|whos) (?:is |are )?(?:that |the )?(.+)$/.exec(n);
+  if (m) return rerun(g, `look ${m[1]}`);
+  if (/^how (do|can|should) i\b/.test(n) || /^(why|when) /.test(n))
+    return said(g, g.has('duck') ? 'Good question. Ask your duck: TALK TO DUCK. (Ask twice for a more specific answer.)' : "Good question. If only you had someone to talk your problems through with.");
+  if (['yes', 'no', 'ok', 'okay', 'sure', 'nope', 'yep', 'maybe', 'y', 'k'].includes(n)) return said(g, 'Okay.');
+  if (['thanks', 'thank you', 'thx', 'ty'].includes(n)) return said(g, "You're welcome.");
   if (/^sudo\b/.test(t)) {
     if (/make me a sandwich/.test(t)) await g.say('Okay.');
     else await g.say('Dominic is not in the sudoers file. This incident will be reported.');

@@ -2,7 +2,7 @@ import { Surface, Img, TRANSPARENT } from './raster';
 import { RGBA32, DARKER } from './palette';
 import { Actor, Dir } from './actor';
 import { WalkMap, Pt } from './walk';
-import { parse, Command, makeLocal, addNouns, ANIMATE } from './parser';
+import { parse, Command, makeLocal, addNouns, addKnownNouns, ANIMATE } from './parser';
 import {
   Modal,
   MessageBox,
@@ -186,6 +186,12 @@ export class Game {
     this.buildMenus();
     this.bindInput();
     window.addEventListener('resize', () => this.resize());
+    document.addEventListener('visibilitychange', () => {
+      const ctx = this.audio.ctx;
+      if (!ctx) return;
+      if (document.hidden) ctx.suspend();
+      else ctx.resume();
+    });
     this.resize();
   }
 
@@ -193,8 +199,8 @@ export class Game {
   registerRooms(list: RoomDef[]) {
     for (const r of list) {
       this.rooms[r.id] = r;
-      if (r.nouns) addNouns(r.nouns);
-      for (const h of r.hotspots ?? []) addNouns({ [h.id]: h.nouns ?? [] });
+      if (r.nouns) addKnownNouns(r.nouns);
+      for (const h of r.hotspots ?? []) addKnownNouns({ [h.id]: h.nouns ?? [] });
     }
   }
   registerItems(list: ItemDef[]) {
@@ -480,8 +486,10 @@ export class Game {
         else if (d > 0.85) {
           const th = (d - 0.85) / 0.3;
           const b = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5][((y & 3) << 2) | (x & 3)] / 16;
-          f.px[i] = b < th ? 0 : DARKER[f.px[i]];
-        } else if (L.rainbow && d > 0.5 && ((x + y) & 3) === 0 && f.px[i] !== 0) f.px[i] = tint;
+          if (b < th) f.px[i] = 0;
+          else if (L.rainbow && th < 0.45 && b < th + 0.25) f.px[i] = tint; // glowing colored rim
+          else f.px[i] = DARKER[f.px[i]];
+        }
       }
   }
 
@@ -1126,6 +1134,9 @@ export class Game {
     this.player.map = null;
     this.player.z = null;
     this.player.ghost = false;
+    this.player.custom = null;
+    this.player.front = false;
+    this.player.speed = 1;
     this.light = null;
     this.dark = false;
     this.palMap = new Uint8Array(256).map((_, i) => i);
@@ -1180,14 +1191,51 @@ export class Game {
 
   // =========================================================== commands
   execute(text: string) {
-    const raw = text.trim();
+    let raw = text.trim();
     if (!raw) return;
     this.history.push(raw);
     if (this.history.length > 50) this.history.shift();
     this.state.moves++;
+    raw = this.applyPronouns(raw);
     const c = parse(raw, this.localNouns);
     this.resolveItemNouns(c);
+    this.notePronouns(c);
     this.runCommand(c);
+  }
+
+  // --------------------------------------------------------- pronouns ("turn it on", "give it to him")
+  private lastThing: string | null = null;
+  private lastPerson: string | null = null;
+  private lastPronounRoom: string | null = null;
+
+  private isPerson(id: string | null): boolean {
+    return !!id && (ANIMATE.has(id) || !!this.actor(id));
+  }
+
+  /** Replace it/them/him/her with the most recently mentioned thing or person. */
+  applyPronouns(raw: string): string {
+    if (this.lastPronounRoom !== this.room?.id) {
+      // people don't follow you between rooms; things you carry do
+      this.lastPerson = null;
+      if (this.lastThing && !this.state.inv.some((i) => this.items[i]?.nouns.includes(this.lastThing!))) this.lastThing = null;
+      this.lastPronounRoom = this.room?.id ?? null;
+    }
+    if (!/\b(it|them|him|her)\b/i.test(raw)) return raw;
+    let out = raw;
+    if (this.lastThing) out = out.replace(/\b(it|them)\b/i, this.lastThing);
+    if (this.lastPerson) out = out.replace(/\b(him|her)\b/i, this.lastPerson);
+    return out;
+  }
+
+  notePronouns(c: Command) {
+    for (const [id, word] of [
+      [c.noun, c.nounWord],
+      [c.noun2, c.noun2Word],
+    ] as const) {
+      if (!id || !word || id.startsWith('elsewhere:')) continue;
+      if (this.isPerson(id)) this.lastPerson = word;
+      else if (!['self', 'room', 'everything', 'north', 'south', 'east', 'west', 'up', 'down'].includes(id)) this.lastThing = word;
+    }
   }
 
   /** If a typed phrase names a carried item under a different id (e.g. "mug" for the coffee), prefer the carried one. */
@@ -1227,8 +1275,18 @@ export class Game {
         break;
     }
     this.script(async () => {
-      if (await this.dispatch(c)) return;
-      await this.hooks.fallback(this, c);
+      if (!(await this.dispatch(c))) await this.hooks.fallback(this, c);
+      // "Try Again" resumes from just before the last command, not the room entrance
+      const p = this.player;
+      const inZone = (this.room?.zones ?? []).some((z) => (z.when?.(this) ?? true) && inArea(z.area, p.x, p.y));
+      if (!this.dying && this.room && !this.room.cutscene && this.playing && !inZone && this.busy <= 1) {
+        this.checkpoint = this.serialize();
+        try {
+          localStorage.setItem(AUTOSAVE_KEY, this.checkpoint);
+        } catch {
+          /* ignore */
+        }
+      }
     });
   }
 
@@ -1268,7 +1326,7 @@ export class Game {
         return true;
       }
     }
-    if (c.verb === 'look' && !c.noun && r.look) {
+    if (c.verb === 'look' && !c.noun && !c.unknown && r.look) {
       if (typeof r.look === 'string') await this.say(r.look);
       else {
         const out = await r.look(this);
@@ -1565,6 +1623,7 @@ export class Game {
   /** Teleport to a room (testing). */
   testGoto(room: string, x?: number, y?: number) {
     this.cancelScripts();
+    this.dying = false;
     this.modals = [];
     this.playing = true;
     this.goto(room, x !== undefined && y !== undefined ? [x, y] : undefined, { noDissolve: true });

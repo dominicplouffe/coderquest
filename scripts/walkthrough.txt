@@ -1,0 +1,133 @@
+# Coder's Quest — full walkthrough test (all 256 points).
+# Run with: npm test
+#newgame
+#expect-flag intro_done
+# ---------------------------------------------------------------- Act I: the cubicle
+open drawer
+take duck
+take mug
+look under keyboard
+take badge
+#expect-score 9
+# ---------------------------------------------------------------- the open office
+go east
+tap nicholas
+give note to nicholas
+pry esc key
+talk to aidan
+#expect-score 29
+# ---------------------------------------------------------------- break room
+go east
+go to break room
+turn off machine
+turn on machine
+fill mug
+look in coin return
+buy candy
+#expect-score 50
+# ---------------------------------------------------------------- NOC
+go south
+go to noc
+give coffee to fahim
+#expect-score 58
+# ---------------------------------------------------------------- R&D lab
+go south
+use badge on reader
+go to lab
+give power bank to krishna
+#expect-score 69
+# ---------------------------------------------------------------- Phil
+go south
+go west
+go west
+show report to phil
+#expect-score 77
+# ---------------------------------------------------------------- the stairwell door
+go east
+go east
+use keycard on reader
+#expect-score 80
+go to stairwell
+#expect-score 80
+# ---------------------------------------------------------------- the dark stairwell
+turn on keyboard
+#expect-score 85
+#exitto basement
+# ---------------------------------------------------------------- the basement corridor
+look at photo
+open panel
+turn off breaker 3
+#expect-score 90
+knock on door
+say gertrude
+#expect-score 95
+#exitto serverroom
+# ---------------------------------------------------------------- the server room
+talk to denis
+say none
+#expect-item manual
+#expect-item adapter
+#expect-score 103
+plug adapter into monolith
+#expect-score 106
+wear helmet
+#expect-score 111
+# ================================================================ Act II: inside the Monolith
+talk to king
+talk to duck
+#expect-score 116
+# ---------------------------------------------------------------- the Heap
+go east
+wear badge
+take jar
+go west
+# ---------------------------------------------------------------- Spaghetti Forest & Stack Tower
+go north
+refactor spaghetti
+go west
+say :q!
+ask oracle about the bridge
+#expect-item node
+#expect-score 147
+# ---------------------------------------------------------------- Infinite Loop & Deadlock
+go east
+go north
+break
+go north
+give the break bar to thread a
+talk to adriana
+#expect-item patch
+#expect-score 170
+# ---------------------------------------------------------------- the Null Void & the Legacy Dragon
+go south
+go south
+go south
+go west
+put node in gap
+go west
+read manual to dragon
+#expect-score 190
+# ---------------------------------------------------------------- the Core
+#exitto core
+put jar on altar
+close eyes
+read altar
+apply patch
+#expect-score 217
+log out
+#expect-score 222
+# ================================================================ Act III: the deploy
+talk to denis
+#expect-score 225
+commit
+ask adriana to review
+run tests
+#expect-score 240
+look at clock
+wait
+#expect-flag midnight
+#expect-score 246
+deploy
+#expect-flag deployed
+#expect-score 256
+#eval window.game.modals.some((m) => m.fullscreen) ? 'credits are rolling' : 'NO CREDITS'

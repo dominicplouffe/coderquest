@@ -30,7 +30,7 @@ const VERBS: Record<string, string[]> = {
     'view', 'observe', 'study', 'watch', 'see', 'peer at', 'peer into>in', 'peer', 'gaze at', 'gaze',
     'stare at', 'stare', 'glance at', 'glance', 'describe', 'admire', 'ogle',
   ],
-  search: ['search through', 'search in', 'search', 'rummage through', 'rummage in', 'rummage', 'frisk', 'dig through', 'go through', 'look for', 'find'],
+  search: ['search through', 'search in', 'search', 'rummage through', 'rummage in', 'rummage', 'frisk', 'dig through', 'look for', 'find'],
   read: ['read', 'peruse', 'skim'],
   take: ['pick up', 'take', 'get', 'grab', 'obtain', 'acquire', 'steal', 'collect', 'snatch', 'nab', 'snag', 'borrow', 'retrieve', 'keep', 'carry'],
   drop: ['put down', 'drop', 'discard', 'throw away', 'dump', 'ditch', 'release'],
@@ -52,7 +52,7 @@ const VERBS: Record<string, string[]> = {
   turnon: ['turn on', 'switch on', 'power on', 'power up', 'activate', 'enable', 'boot up', 'boot', 'start up', 'light up', 'illuminate'],
   turnoff: ['turn off', 'switch off', 'power off', 'power down', 'deactivate', 'disable', 'shut down', 'shutdown', 'shut off', 'kill power to'],
   turn: ['turn', 'rotate', 'twist', 'spin', 'switch'],
-  flip: ['flip', 'toggle', 'throw'],
+  flip: ['flip', 'toggle'],
   reboot: ['reboot', 'restart', 'reset', 'power cycle', 'cycle'],
   unplug: ['unplug', 'disconnect', 'detach'],
   plug: ['plug in', 'plug', 'connect', 'hook up', 'attach', 'jack into>into', 'jack in'],
@@ -134,7 +134,12 @@ const VERBS: Record<string, string[]> = {
   quit: ['quit game', 'quit', 'exit game'],
   version: ['version', 'about', 'credits'],
   pause: ['pause'],
-  curse: ['damn', 'dammit', 'shit', 'fuck', 'crap', 'hell', 'ass', 'bitch', 'bastard', 'piss'],
+  curse: ['damn', 'dammit', 'shit', 'fuck', 'crap', 'hell', 'ass', 'bitch', 'bastard', 'piss', 'swear', 'curse', 'cuss'],
+  make: ['make', 'prepare', 'cook', 'build', 'craft'],
+  lift: ['lift up', 'lift', 'raise', 'hoist', 'tip'],
+  water: ['water'],
+  charge: ['recharge', 'charge'],
+  squeeze: ['squeeze', 'squish', 'squeak', 'honk'],
   xyzzy: ['xyzzy', 'plugh', 'plover'],
 };
 
@@ -142,7 +147,7 @@ const STOP = new Set([
   'the', 'a', 'an', 'some', 'my', 'your', 'his', 'her', 'its', 'their', 'our', 'this', 'that', 'these', 'those',
   'please', 'now', 'then', 'quickly', 'carefully', 'just', 'very', 'really', 'gently', 'again', 'it', 'him', 'them',
   'all', 'any', 'kindly', 'slowly', 'lol', 'up', 'down', 'piece', 'bit', 'bunch', 'whole', 'try', 'to', 'and', 'other',
-  'there', 'until', 'till', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
+  'there', 'until', 'till', 'closely', 'harder', 'deeply', 'quietly', 'politely', 'firmly', 'hard', 'softly', 'nicely', 'mr', 'ms', 'mrs', 'sir', 'dr', 'old', 'big', 'little',
 ]);
 
 const PREPS = new Set([
@@ -170,7 +175,10 @@ export const ANIMATE = new Set<string>();
 
 // --------------------------------------------------------------- vocabulary
 type PhraseMap = Map<string, string>;
+/** items, people and built-in words: meaningful everywhere */
 const globalNouns: PhraseMap = new Map();
+/** words that belong to some room: recognized everywhere, but only resolve to "not here" elsewhere */
+const elsewhereNouns: PhraseMap = new Map();
 const verbPhrases: { words: string[]; verb: string; prep: string | null }[] = [];
 for (const [verb, list] of Object.entries(VERBS)) {
   for (const entry of list) {
@@ -196,6 +204,16 @@ export function addNouns(map: Record<string, string[]>, target: PhraseMap = glob
   }
 }
 
+/** Register a room's vocabulary as known words without letting it shadow other rooms. */
+export function addKnownNouns(map: Record<string, string[]>) {
+  for (const [id, phrases] of Object.entries(map)) {
+    for (const p of [id, ...phrases]) {
+      const k = normalize(p);
+      if (!elsewhereNouns.has(k)) elsewhereNouns.set(k, `elsewhere:${id}`);
+    }
+  }
+}
+
 export function makeLocal(map: Record<string, string[]> | undefined): PhraseMap {
   const m: PhraseMap = new Map();
   if (map) addNouns(map, m);
@@ -205,6 +223,7 @@ export function makeLocal(map: Record<string, string[]> | undefined): PhraseMap 
 export function isKnownWord(w: string): boolean {
   if (STOP.has(w) || PREPS.has(w) || w in NUMBERS || w in DIRS || /^\d+$/.test(w)) return true;
   for (const k of globalNouns.keys()) if (k.split(' ').includes(w)) return true;
+  for (const k of elsewhereNouns.keys()) if (k.split(' ').includes(w)) return true;
   for (const v of verbPhrases) if (v.words.includes(w)) return true;
   return false;
 }
@@ -322,7 +341,8 @@ export function parse(raw: string, local?: PhraseMap, extraLocal?: PhraseMap): C
   const nouns: { id: string; word: string }[] = [];
   let prepSeen: string | null = null;
   let i = 0;
-  const lookup = (phrase: string): string | undefined => local?.get(phrase) ?? extraLocal?.get(phrase) ?? globalNouns.get(phrase);
+  const lookup = (phrase: string): string | undefined =>
+    local?.get(phrase) ?? extraLocal?.get(phrase) ?? globalNouns.get(phrase) ?? elsewhereNouns.get(phrase);
   while (i < restWords.length) {
     const w = restWords[i];
     let matched = false;
@@ -368,7 +388,7 @@ export function parse(raw: string, local?: PhraseMap, extraLocal?: PhraseMap): C
     c.prep = 'to';
   }
   // "look around" / "look at room" -> plain look
-  if (c.verb === 'look' && (c.noun === 'room' || c.noun === 'around')) {
+  if (c.verb === 'look' && (c.noun === 'room' || c.noun === 'around' || c.noun === 'everything')) {
     c.noun = null;
     c.nounWord = null;
   }

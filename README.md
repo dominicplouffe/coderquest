@@ -33,10 +33,10 @@ play like a 1987 Sierra adventure (*Space Quest III*, *King's Quest IV*, *Leisur
 
 ## Play it
 
-### Option 1 — Just open it
-Build once (see below) and double-click **`dist/index.html`**. The whole game is a single
-self-contained HTML file: no server, no install, works offline in any modern browser on macOS,
-Linux and Windows. You can email it to friends.
+### Option 1 — Just open it (no install)
+Download **[`CodersQuest.html`](CodersQuest.html)** and double-click it. The whole game is a
+single self-contained file: no server, no install, works offline in any modern browser
+(Chrome, Firefox, Safari, Edge) on macOS, Linux and Windows. You can email it to friends.
 
 ### Option 2 — Run from source
 ```bash
@@ -44,10 +44,11 @@ npm install
 npm start          # opens http://localhost:5173 in your browser
 ```
 
-### Option 3 — Build the single-file game
+### Option 3 — Build the single-file game yourself
 ```bash
 npm install
 npm run build      # -> dist/index.html (self-contained)
+npm run release    # also refreshes CodersQuest.html in the repo root
 ```
 
 ### Option 4 — GitHub Pages
@@ -71,6 +72,8 @@ Just start typing. Press **Enter** to send a command.
 | Sound on/off | `F2` |
 | Help | `F1` |
 | Stuck? | `TALK TO DUCK` |
+
+On a phone or tablet, tap to walk and use the **Type / Items / Menu** buttons.
 
 Tips from 1987: **save often**, look at everything, read everything, and if a sign says not to
 do something, think hard before doing it anyway.
